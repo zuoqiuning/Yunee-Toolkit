@@ -109,6 +109,8 @@ interface YuneeApi {
   getGpuInfo: () => Promise<GpuDetectResult | null>
   /** 获取启动阶段检测到的 CPU 信息（型号 / 物理核 / 逻辑核），未检测到返回 null */
   getCpuInfo: () => Promise<CpuInfo | null>
+  /** 设置关闭窗口行为：exit=退出，tray=最小化到托盘（同步到主进程托盘/关闭逻辑） */
+  setCloseBehavior: (behavior: 'exit' | 'tray') => Promise<boolean>
   /** 日志系统：初始化/切换日志目录并应用清理规则，返回生效配置 */
   initLogger: (dir: string, retainDays: number, maxFiles: number) => Promise<LogConfig>
   /** 日志系统：上报一条用户操作记录（scope=来源模块、action=动作、message=说明） */
@@ -117,8 +119,43 @@ interface YuneeApi {
   cleanLogs: (retainDays: number, maxFiles: number) => Promise<LogCleanResult>
   /** 日志系统：查询当前日志目录与清理规则 */
   getLogConfig: () => Promise<LogConfig>
+  /** 日志系统：列出日志目录下全部日志文件（在线查看列表，按日期倒序） */
+  listLogs: () => Promise<LogFileInfo[]>
+  /** 日志系统：读取指定日志文件内容（在线查看；非法文件名/读取失败返回 null） */
+  readLog: (name: string) => Promise<string | null>
+  /** 临时文件清理：上报自动清理配置（目录 + 开关 + 保留天数），主进程据此启动时按天清理残留，返回移除条目数 */
+  syncTempClean: (tempDir: string, autoClean: boolean, retainDays: number) => Promise<number>
+  /** 自动更新：触发一次更新检查（manual=true 用户手动触发，无更新/出错会提示；false 启动静默检查） */
+  checkForUpdates: (manual?: boolean) => Promise<boolean>
+  /** 自动更新：立即重启并安装已下载的更新 */
+  installUpdate: () => Promise<boolean>
   /** 开源协议：读取指定开源项目的协议文本（未登记/读取失败返回 null） */
   getLicenseText: (key: string) => Promise<string | null>
+  /** 弹出文件选择对话框（可按过滤器限定类型），取消返回 null */
+  selectFile: (filters?: { name: string; extensions: string[] }[]) => Promise<string | null>
+  /** 转换任务：入队一个新任务，返回创建的任务（含 id/初始状态）；校验失败返回 null */
+  startConversion: (payload: {
+    kind: 'video' | 'audio' | 'image' | 'container'
+    input: string
+    output: string
+    options?: ConversionOptions
+    priority?: 'low' | 'normal' | 'high'
+  }) => Promise<ConversionTask | null>
+  /** 转换任务：取消（运行中中止+清理残留；排队中移除） */
+  cancelConversion: (id: string) => Promise<boolean>
+  /** 转换任务：查询全部任务 */
+  getConversionTasks: () => Promise<ConversionTask[]>
+  /** 转换任务：清理全部已结束任务，返回清理数量 */
+  clearFinishedConversions: () => Promise<number>
+  /** 媒体信息：探测输入文件（非媒体/不存在返回 null），供界面展示文件详情 */
+  probeMedia: (input: string) => Promise<MediaInfo | null>
+  /** 输出路径：输入文件 + 格式 + 命名预设 + 输出目录 → 输出路径（含重名策略所需的存在标记） */
+  resolveOutput: (payload: {
+    input: string
+    format: string
+    preset?: 'keep' | 'time-suffix' | 'time-prefix'
+    outputDir?: string
+  }) => Promise<ResolveOutputResult | null>
 }
 
 /** 安装目录下的默认输出/临时/日志目录 */
@@ -140,6 +177,16 @@ declare global {
   interface Window {
     // Electron 预加载暴露的安全桥接对象
     yuneeAPI?: YuneeApi
+  }
+
+  // 日志文件信息（在线查看列表展示）
+  interface LogFileInfo {
+    /** 文件名（YYYY-MM-DD.log） */
+    name: string
+    /** 日期键（YYYY-MM-DD） */
+    date: string
+    /** 文件大小（字节） */
+    size: number
   }
 
   // 工具探测：单个可执行组件的信息
@@ -170,6 +217,79 @@ declare global {
     dirPath: string
     /** 各可执行组件的探测结果 */
     executables: ToolExecutableInfo[]
+  }
+
+  // 转换任务：类型（与主进程 queue/types 保持一致）
+  type TaskKind = 'video' | 'audio' | 'image' | 'container'
+  type TaskStatus = 'queued' | 'running' | 'completed' | 'failed' | 'aborted'
+  type TaskPriority = 'low' | 'normal' | 'high'
+
+  // 转换任务：参数
+  interface ConversionOptions {
+    format?: string
+    videoCodec?: 'copy' | 'h264' | 'hevc' | 'vp9' | 'av1'
+    crf?: number
+    resolution?: { width?: number; height?: number } | null
+    fps?: number | null
+    audioCodec?: 'copy' | 'aac' | 'mp3' | 'opus' | 'vorbis'
+    audioBitrate?: string
+    hwaccel?: 'none' | 'nvidia' | 'intel' | 'amd'
+    threads?: number
+  }
+
+  // 转换任务：进度
+  interface TaskProgress {
+    percent: number
+    speed: string
+    fps: number
+    bitrate: string
+    outTimeMs: number
+  }
+
+  // 转换任务：完整任务对象
+  interface ConversionTask {
+    id: string
+    kind: TaskKind
+    status: TaskStatus
+    input: string
+    output: string
+    options: ConversionOptions
+    progress: TaskProgress
+    error: string | null
+    priority: TaskPriority
+    createdAt: number
+    startedAt: number | null
+    finishedAt: number | null
+  }
+
+  // 媒体基础信息（ffprobe 探测结果，供界面展示文件详情）
+  interface MediaInfo {
+    /** 总时长（秒） */
+    durationSec: number
+    /** 视频宽度（无视频为 0） */
+    width: number
+    /** 视频高度（无视频为 0） */
+    height: number
+    /** 视频编码（无视频为空串） */
+    videoCodec: string
+    /** 音频编码（无音频为空串） */
+    audioCodec: string
+    /** 是否含视频流 */
+    hasVideo: boolean
+    /** 是否含音频流 */
+    hasAudio: boolean
+    /** 容器格式名（如 mov,mp4,m4a,3gp,3g2,mj2） */
+    formatName: string
+  }
+
+  // 输出路径解析结果（主进程计算，供界面预览 / 重名决策）
+  interface ResolveOutputResult {
+    /** 直接输出路径（已应用命名预设，未去重） */
+    path: string
+    /** 自动改名后的不冲突路径（无冲突时等于 path） */
+    uniquePath: string
+    /** 直接路径是否已存在（供“每次询问”策略在界面弹窗） */
+    exists: boolean
   }
 }
 

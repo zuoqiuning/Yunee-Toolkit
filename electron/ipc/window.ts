@@ -8,6 +8,7 @@
  *   - initWindowControls 由主进程在创建窗口后调用，负责状态事件推送。
  */
 import { ipcMain, BrowserWindow } from 'electron'
+import { setCloseBehavior, type CloseBehavior } from '../main/tray'
 
 /**
  * 注册窗口控制 IPC 处理器（应用就绪时与其余处理器一并注册）。
@@ -33,6 +34,13 @@ export function registerWindowControls(): void {
   // 关闭窗口
   ipcMain.handle('win:close', (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+
+  // 同步「关闭窗口行为」（退出 / 最小化到托盘），供主窗口 close 事件判断是否拦截
+  ipcMain.handle('app:set-close-behavior', (_e, behavior: unknown) => {
+    if (behavior !== 'exit' && behavior !== 'tray') return false
+    setCloseBehavior(behavior as CloseBehavior)
+    return true
   })
 }
 

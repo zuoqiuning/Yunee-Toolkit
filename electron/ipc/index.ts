@@ -12,6 +12,8 @@ import { registerCpuIpc } from './cpu'
 import { registerToolsIpc } from './tools'
 import { registerLoggerIpc } from './logger'
 import { registerLicenseIpc } from './license'
+import { registerConversionIpc } from './conversion'
+import { registerUpdaterIpc } from './updater'
 
 /**
  * 注册所有主进程 IPC 处理器
@@ -37,6 +39,12 @@ export function registerIpcHandlers(): void {
 
   // 开源协议相关：协议文本读取（“关于”界面查看协议弹窗）
   registerLicenseIpc()
+
+  // 转换任务相关：任务入队 / 取消 / 查询 / 清理（进度与结果由队列事件推送）
+  registerConversionIpc()
+
+  // 自动更新相关：检查更新 / 重启安装（状态由 update:* 事件推送）
+  registerUpdaterIpc()
 
   // 基础信息类：返回应用版本
   ipcMain.handle('app:get-version', () => app.getVersion())

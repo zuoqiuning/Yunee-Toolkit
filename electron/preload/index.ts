@@ -79,6 +79,25 @@ export interface LogCleanResult {
   remaining: number
 }
 
+/** 日志文件信息（在线查看列表展示） */
+export interface LogFileInfo {
+  /** 文件名（YYYY-MM-DD.log） */
+  name: string
+  /** 日期键（YYYY-MM-DD） */
+  date: string
+  /** 文件大小（字节） */
+  size: number
+}
+
+/** 转换任务（透传主进程队列类型） */
+export type { ConversionTask } from '../main/queue/types'
+
+/** 媒体基础信息（透传主进程探测类型） */
+export type { MediaInfo } from '../main/ffmpeg/probe'
+
+/** 输出路径解析结果（透传主进程类型） */
+export type { ResolveOutputResult } from '../main/ffmpeg/output'
+
 /** 日志系统配置（目录 + 清理规则） */
 export interface LogConfig {
   dir: string
@@ -122,6 +141,8 @@ export interface YuneeApi {
   getGpuInfo: () => Promise<GpuDetectResult | null>
   /** 获取启动阶段检测到的 CPU 信息（型号 / 物理核 / 逻辑核），未检测到返回 null */
   getCpuInfo: () => Promise<CpuInfo | null>
+  /** 设置关闭窗口行为：exit=退出，tray=最小化到托盘（同步到主进程托盘/关闭逻辑） */
+  setCloseBehavior: (behavior: 'exit' | 'tray') => Promise<boolean>
   /** 日志系统：初始化/切换日志目录并应用清理规则，返回生效配置 */
   initLogger: (dir: string, retainDays: number, maxFiles: number) => Promise<LogConfig>
   /** 日志系统：上报一条用户操作记录（scope=来源模块、action=动作、message=说明） */
@@ -130,8 +151,43 @@ export interface YuneeApi {
   cleanLogs: (retainDays: number, maxFiles: number) => Promise<LogCleanResult>
   /** 日志系统：查询当前日志目录与清理规则 */
   getLogConfig: () => Promise<LogConfig>
+  /** 日志系统：列出日志目录下全部日志文件（在线查看列表，按日期倒序） */
+  listLogs: () => Promise<LogFileInfo[]>
+  /** 日志系统：读取指定日志文件内容（在线查看；非法文件名/读取失败返回 null） */
+  readLog: (name: string) => Promise<string | null>
+  /** 临时文件清理：上报自动清理配置（目录 + 开关 + 保留天数），主进程据此启动时按天清理残留，返回移除条目数 */
+  syncTempClean: (tempDir: string, autoClean: boolean, retainDays: number) => Promise<number>
+  /** 自动更新：触发一次更新检查（manual=true 用户手动触发，无更新/出错会提示；false 启动静默检查） */
+  checkForUpdates: (manual?: boolean) => Promise<boolean>
+  /** 自动更新：立即重启并安装已下载的更新 */
+  installUpdate: () => Promise<boolean>
   /** 开源协议：读取指定开源项目的协议文本（未登记/读取失败返回 null） */
   getLicenseText: (key: string) => Promise<string | null>
+  /** 弹出文件选择对话框（可按过滤器限定类型），取消返回 null */
+  selectFile: (filters?: { name: string; extensions: string[] }[]) => Promise<string | null>
+  /** 转换任务：入队一个新任务，返回创建的任务（含 id/初始状态）；校验失败返回 null */
+  startConversion: (payload: {
+    kind: 'video' | 'audio' | 'image' | 'container'
+    input: string
+    output: string
+    options?: Record<string, unknown>
+    priority?: 'low' | 'normal' | 'high'
+  }) => Promise<ConversionTask | null>
+  /** 转换任务：取消（运行中中止+清理残留；排队中移除） */
+  cancelConversion: (id: string) => Promise<boolean>
+  /** 转换任务：查询全部任务 */
+  getConversionTasks: () => Promise<ConversionTask[]>
+  /** 转换任务：清理全部已结束任务，返回清理数量 */
+  clearFinishedConversions: () => Promise<number>
+  /** 媒体信息：探测输入文件（非媒体/不存在返回 null），供界面展示文件详情 */
+  probeMedia: (input: string) => Promise<MediaInfo | null>
+  /** 输出路径：输入文件 + 格式 + 命名预设 + 输出目录 → 输出路径（含重名策略所需的存在标记） */
+  resolveOutput: (payload: {
+    input: string
+    format: string
+    preset?: 'keep' | 'time-suffix' | 'time-prefix'
+    outputDir?: string
+  }) => Promise<ResolveOutputResult | null>
 }
 
 // 校验 channel 白名单，仅允许注册在主进程的事件通道
@@ -139,8 +195,17 @@ const MAIN_EVENT_CHANNELS = new Set([
   'conversion-progress', // 转换进度
   'conversion-complete', // 转换完成
   'conversion-error',    // 转换失败
+  'conversion-queued',   // 转换任务入队
+  'conversion-removed',  // 转换任务移除（取消/清理）
   'window:maximized-changed', // 窗口最大化状态变化
   'splash:task',         // 启动加载窗口：预加载任务状态
+  'open-settings',       // 托盘菜单：请求打开「设置」模态框
+  'update:checking',     // 自动更新：开始检查
+  'update:available',    // 自动更新：发现新版本
+  'update:not-available',// 自动更新：已是最新版本
+  'update:downloading',  // 自动更新：下载进度
+  'update:downloaded',   // 自动更新：下载完成
+  'update:error',        // 自动更新：出错
 ])
 
 // 通过 contextBridge 暴露安全 API
@@ -159,6 +224,7 @@ const api: YuneeApi = {
   getSpaceStat: (outputDir, force) => ipcRenderer.invoke('storage:get-space-stat', outputDir, force),
   getGpuInfo: () => ipcRenderer.invoke('hardware:get-gpu-info'),
   getCpuInfo: () => ipcRenderer.invoke('cpu:get-info'),
+  setCloseBehavior: (behavior) => ipcRenderer.invoke('app:set-close-behavior', behavior),
   initLogger: (dir, retainDays, maxFiles) =>
     ipcRenderer.invoke('log:init', dir, retainDays, maxFiles),
   logEvent: (scope, action, message) =>
@@ -166,7 +232,20 @@ const api: YuneeApi = {
   cleanLogs: (retainDays, maxFiles) =>
     ipcRenderer.invoke('log:clean', retainDays, maxFiles),
   getLogConfig: () => ipcRenderer.invoke('log:get-config'),
+  listLogs: () => ipcRenderer.invoke('log:list'),
+  readLog: (name) => ipcRenderer.invoke('log:read', name),
+  syncTempClean: (tempDir, autoClean, retainDays) =>
+    ipcRenderer.invoke('storage:sync-temp-clean', tempDir, autoClean, retainDays),
+  checkForUpdates: (manual) => ipcRenderer.invoke('update:check', manual === true),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
   getLicenseText: (key) => ipcRenderer.invoke('license:get', key),
+  selectFile: (filters) => ipcRenderer.invoke('dialog:select-file', filters),
+  startConversion: (payload) => ipcRenderer.invoke('conversion:start', payload),
+  cancelConversion: (id) => ipcRenderer.invoke('conversion:cancel', id),
+  getConversionTasks: () => ipcRenderer.invoke('conversion:list'),
+  clearFinishedConversions: () => ipcRenderer.invoke('conversion:clear-finished'),
+  probeMedia: (input) => ipcRenderer.invoke('conversion:probe', input),
+  resolveOutput: (payload) => ipcRenderer.invoke('conversion:resolve-output', payload),
 
   // 自绘标题栏：窗口控制
   windowControl: {

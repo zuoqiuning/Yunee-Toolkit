@@ -171,6 +171,54 @@ export function getLogDir(): string {
   return currentDir
 }
 
+/** 日志文件信息（供“在线查看”列表展示） */
+export interface LogFileInfo {
+  /** 文件名（YYYY-MM-DD.log） */
+  name: string
+  /** 日期键（YYYY-MM-DD） */
+  date: string
+  /** 文件大小（字节） */
+  size: number
+}
+
+/**
+ * 列出当前日志目录下全部按日期命名的日志文件（按日期倒序，最新的在前）。
+ * 供渲染进程“在线查看”选择文件；目录不可读时返回空数组。
+ */
+export async function listLogFiles(): Promise<LogFileInfo[]> {
+  if (!currentDir) return []
+  let names: string[] = []
+  try {
+    names = await fs.promises.readdir(currentDir)
+  } catch {
+    return []
+  }
+  const files: LogFileInfo[] = []
+  for (const n of names.filter((x) => /^\d{4}-\d{2}-\d{2}\.log$/.test(x)).sort().reverse()) {
+    try {
+      const st = await fs.promises.stat(path.join(currentDir, n))
+      files.push({ name: n, date: n.slice(0, 10), size: st.size })
+    } catch {
+      // 单个文件 stat 失败跳过，不影响其余
+    }
+  }
+  return files
+}
+
+/**
+ * 读取指定日志文件内容（供“在线查看”展示）。
+ * 仅允许日期命名文件（防路径穿越）；目录未初始化 / 读取失败返回 null。
+ */
+export async function readLogFile(name: string): Promise<string | null> {
+  if (!currentDir) return null
+  if (typeof name !== 'string' || !/^\d{4}-\d{2}-\d{2}\.log$/.test(name)) return null
+  try {
+    return await fs.promises.readFile(path.join(currentDir, name), 'utf8')
+  } catch {
+    return null
+  }
+}
+
 /** 读取当前清理规则（供渲染进程展示） */
 export function getCleanRules(): { retainDays: number; maxFiles: number } {
   return { retainDays, maxFiles }

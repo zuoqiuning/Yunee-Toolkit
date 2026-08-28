@@ -16,7 +16,10 @@ import { initWindowControls } from '../ipc/window'
 import { redirectUserDataInDev } from './dataDir'
 import { createSplashWindow, closeSplashWindow, pushTaskStatus } from './splash'
 import { runStartupTasks } from './startup'
+import { destroyTray, getCloseBehavior, initTray } from './tray'
+import { initUpdater } from './updater'
 import { setLogDir, info as logInfo, closeSession } from './logger'
+import { taskQueue } from './queue/manager'
 
 // 记录主窗口实例，防止被垃圾回收
 let mainWindow: BrowserWindow | null = null
@@ -30,10 +33,27 @@ const isDev = process.env.NODE_ENV === 'development'
 // 开发环境：将用户数据重定向到项目 data 目录（须在 app ready 前调用）
 redirectUserDataInDev()
 
+// —— 单实例锁：防止多开 ——
+// 二次启动时，若已获得锁则直接退出；否则监听 second-instance 聚焦已有窗口。
+// 注意：必须在 app ready 之前调用，才能真正起到防多开作用。
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    // 已有一个实例在运行：还原最小化并聚焦主窗口
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+}
+
 /**
  * 创建应用主窗口
  * 严格遵循安全配置：开启上下文隔离、沙箱，关闭 nodeIntegration。
- * 窗口规范：无边框自定义标题栏；透明背景 + 渲染层自绘圆角/阴影（与模态框一致）。
+ * 窗口规范：无边框自定义标题栏；不透明纯直角窗口（roundedCorners: false 禁用系统圆角），阴影由系统绘制。
  */
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
@@ -43,18 +63,12 @@ function createMainWindow(): void {
     minHeight: 680,
     title: 'Yunee Toolkit',
     autoHideMenuBar: true,
-    // 透明背景：四角圆角 + 阴影由渲染层自绘（App.vue app-shell），此处必须关闭默认底色
-    backgroundColor: '#00000000',
-    transparent: true, // 透明窗口（Windows）：配合渲染层圆角/阴影实现圆角窗口
+    // 不透明窗口：外观由系统绘制，渲染层直接铺满，天然单层无套壳
     // 先隐藏，待页面渲染完成（ready-to-show）再显示，避免白屏闪烁
     show: false,
     // —— 自绘窗口标题栏相关 ——
     frame: false,          // 无边框：由渲染进程 TitleBar 接管标题栏
-    roundedCorners: false, // 禁用系统窗口圆角：窗口圆角统一由渲染层自绘，弧度与模态框一致
-    // 关键：透明窗口下必须显式关闭系统阴影，
-    // 否则 Windows 会绘制一个与矩形窗口同大的直角阴影框，产生“外层直角、内层圆角”的双层观感；
-    // 阴影统一由渲染层 CSS box-shadow 自绘
-    hasShadow: false,
+    roundedCorners: false, // 禁用系统窗口圆角（Electron 支持 Windows）：纯直角外观，风格简洁统一
     // 开发态窗口/任务栏图标（打包后由 exe 自带图标接管，无需运行时资源路径）
     ...(isDev ? { icon: path.join(__dirname, '../../resources/icon.ico') } : {}),
     webPreferences: {
@@ -92,6 +106,14 @@ function createMainWindow(): void {
 
   // 绑定窗口控制（最小化/最大化/关闭）并监听最大化状态
   initWindowControls(mainWindow)
+
+  // 关闭窗口行为：设为「最小化到托盘」时拦截 close 改为隐藏窗口，应用不退出
+  mainWindow.on('close', (event) => {
+    if (getCloseBehavior() === 'tray') {
+      event.preventDefault()
+      mainWindow?.hide()
+    }
+  })
 
   // 开发环境加载 Vite 开发服务器；生产环境加载构建产物
   if (isDev) {
@@ -132,6 +154,12 @@ app.whenReady().then(async () => {
   createMainWindow()
   logInfo('main', '主窗口创建完成，应用启动流程结束')
 
+  // 创建系统托盘（绑定主窗口：托盘菜单“显示/设置”与“最小化到托盘”均依赖该引用）
+  if (mainWindow) initTray(mainWindow)
+
+  // 初始化自动更新（绑定主窗口获取器，把更新状态事件推送给界面）
+  initUpdater(() => mainWindow)
+
   // macOS 习惯：点击 Dock 图标时若无窗口则重建
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -147,7 +175,9 @@ app.on('window-all-closed', () => {
   }
 })
 
-// 应用退出前：写入「会话结束」标记（含退出原因）
+// 应用退出前：中止运行中的转换任务、销毁托盘（避免残留图标），并写入「会话结束」标记
 app.on('before-quit', () => {
+  taskQueue.shutdown()
+  destroyTray()
   closeSession('应用退出')
 })

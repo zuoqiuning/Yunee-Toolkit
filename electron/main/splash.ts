@@ -32,12 +32,8 @@ export function createSplashWindow(): BrowserWindow {
     show: false,
     skipTaskbar: true,
     alwaysOnTop: true,
-    // 透明背景：圆角 + 阴影由加载页自绘（shell 容器），与主窗口一致
+    // 与主窗口同方案：不透明纯直角窗口（禁用系统圆角）
     roundedCorners: false,
-    backgroundColor: '#00000000',
-    transparent: true,
-    // 与主窗口一致：显式关闭系统阴影，避免透明窗口出现独立的直角阴影框
-    hasShadow: false,
     title: 'Yunee Toolkit',
     webPreferences: {
       // —— 与主窗口一致的核心安全配置 ——

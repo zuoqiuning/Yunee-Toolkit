@@ -20,6 +20,10 @@ export type CompleteAction = 'openFolder' | 'none'
 export type TaskPriority = 'low' | 'normal' | 'high'
 /** 日志级别（保留定义以兼容旧数据；界面已固定为调试级全量记录） */
 export type LogLevel = 'quiet' | 'info' | 'debug'
+/** 关闭窗口行为：退出 / 最小化到托盘 */
+export type CloseBehavior = 'exit' | 'tray'
+/** 输出文件命名预设 */
+export type FileNamePreset = 'keep' | 'time-suffix' | 'time-prefix'
 
 /** 设置字段清单：顺序与 refs / 持久化 / 变更日志严格保持一致 */
 const FIELD_NAMES = [
@@ -39,6 +43,12 @@ const FIELD_NAMES = [
   'cleanRetainDays',
   'logRetainDays',
   'logMaxFiles',
+  'closeBehavior',
+  'checkUpdateOnStart',
+  'themeFollowSystem',
+  'fileNamePreset',
+  'playSoundOnComplete',
+  'playSoundOnError',
 ] as const
 
 /** 本地持久化键名 */
@@ -121,6 +131,18 @@ interface SettingsState {
   logRetainDays: number
   /** 日志文件数量上限（超过即清理最旧的） */
   logMaxFiles: number
+  /** 关闭窗口行为：退出 / 最小化到托盘 */
+  closeBehavior: CloseBehavior
+  /** 启动时检查更新 */
+  checkUpdateOnStart: boolean
+  /** 是否跟随系统深浅色主题（开启后手动主题切换失效） */
+  themeFollowSystem: boolean
+  /** 输出文件命名预设 */
+  fileNamePreset: FileNamePreset
+  /** 转换完成后播放提示音 */
+  playSoundOnComplete: boolean
+  /** 转换失败时播放提示音 */
+  playSoundOnError: boolean
 }
 
 /** 默认设置 */
@@ -141,6 +163,12 @@ const DEFAULTS: SettingsState = {
   cleanRetainDays: 7,
   logRetainDays: 7,
   logMaxFiles: 50,
+  closeBehavior: 'exit',
+  checkUpdateOnStart: true,
+  themeFollowSystem: false,
+  fileNamePreset: 'keep',
+  playSoundOnComplete: true,
+  playSoundOnError: true,
 }
 
 /** 从 localStorage 安全读取设置，失败或缺失时回退默认值 */
@@ -179,6 +207,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const cleanRetainDays = ref(state.cleanRetainDays)
   const logRetainDays = ref(state.logRetainDays)
   const logMaxFiles = ref(state.logMaxFiles)
+  const closeBehavior = ref<CloseBehavior>(state.closeBehavior)
+  const checkUpdateOnStart = ref(state.checkUpdateOnStart)
+  const themeFollowSystem = ref(state.themeFollowSystem)
+  const fileNamePreset = ref<FileNamePreset>(state.fileNamePreset)
+  const playSoundOnComplete = ref(state.playSoundOnComplete)
+  const playSoundOnError = ref(state.playSoundOnError)
 
   // 字段名 -> 响应式 ref 映射，供按面板/按卡片定点恢复默认值
   const fieldRefs: Record<keyof SettingsState, { value: unknown }> = {
@@ -198,6 +232,12 @@ export const useSettingsStore = defineStore('settings', () => {
     cleanRetainDays,
     logRetainDays,
     logMaxFiles,
+    closeBehavior,
+    checkUpdateOnStart,
+    themeFollowSystem,
+    fileNamePreset,
+    playSoundOnComplete,
+    playSoundOnError,
   }
 
   // 任何字段变化时立即写入 localStorage（读取各 ref 当前值，序列化后保存）
@@ -219,6 +259,12 @@ export const useSettingsStore = defineStore('settings', () => {
       cleanRetainDays,
       logRetainDays,
       logMaxFiles,
+      closeBehavior,
+      checkUpdateOnStart,
+      themeFollowSystem,
+      fileNamePreset,
+      playSoundOnComplete,
+      playSoundOnError,
     ],
     () => {
       try {
@@ -241,6 +287,12 @@ export const useSettingsStore = defineStore('settings', () => {
             cleanRetainDays: cleanRetainDays.value,
             logRetainDays: logRetainDays.value,
             logMaxFiles: logMaxFiles.value,
+            closeBehavior: closeBehavior.value,
+            checkUpdateOnStart: checkUpdateOnStart.value,
+            themeFollowSystem: themeFollowSystem.value,
+            fileNamePreset: fileNamePreset.value,
+            playSoundOnComplete: playSoundOnComplete.value,
+            playSoundOnError: playSoundOnError.value,
           }),
         )
       } catch {
@@ -269,6 +321,12 @@ export const useSettingsStore = defineStore('settings', () => {
       cleanRetainDays,
       logRetainDays,
       logMaxFiles,
+      closeBehavior,
+      checkUpdateOnStart,
+      themeFollowSystem,
+      fileNamePreset,
+      playSoundOnComplete,
+      playSoundOnError,
     ],
     (newVals: unknown[], oldVals: unknown[]) => {
       const parts: string[] = []
@@ -312,6 +370,12 @@ export const useSettingsStore = defineStore('settings', () => {
     cleanRetainDays.value = DEFAULTS.cleanRetainDays
     logRetainDays.value = DEFAULTS.logRetainDays
     logMaxFiles.value = DEFAULTS.logMaxFiles
+    closeBehavior.value = DEFAULTS.closeBehavior
+    checkUpdateOnStart.value = DEFAULTS.checkUpdateOnStart
+    themeFollowSystem.value = DEFAULTS.themeFollowSystem
+    fileNamePreset.value = DEFAULTS.fileNamePreset
+    playSoundOnComplete.value = DEFAULTS.playSoundOnComplete
+    playSoundOnError.value = DEFAULTS.playSoundOnError
   }
 
   /** 仅将指定的若干字段恢复为默认值（用于各设置卡片表头的“恢复默认”） */
@@ -366,6 +430,12 @@ export const useSettingsStore = defineStore('settings', () => {
     cleanRetainDays,
     logRetainDays,
     logMaxFiles,
+    closeBehavior,
+    checkUpdateOnStart,
+    themeFollowSystem,
+    fileNamePreset,
+    playSoundOnComplete,
+    playSoundOnError,
     reset,
     resetFields,
     applyDefaultDirs,

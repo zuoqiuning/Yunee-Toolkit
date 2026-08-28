@@ -9,7 +9,15 @@
  */
 import { ipcMain } from 'electron'
 import path from 'node:path'
-import { setLogDir, logUserEvent, cleanNow, getLogDir, getCleanRules } from '../main/logger'
+import {
+  setLogDir,
+  logUserEvent,
+  cleanNow,
+  getLogDir,
+  getCleanRules,
+  listLogFiles,
+  readLogFile,
+} from '../main/logger'
 import { getDefaultLogDir } from './settings'
 
 /** 数值钳制到合法区间，非法输入回退默认值 */
@@ -57,4 +65,13 @@ export function registerLoggerIpc(): void {
     dir: getLogDir(),
     ...getCleanRules(),
   }))
+
+  // 在线查看：列出日志目录下全部日志文件（按日期倒序）
+  ipcMain.handle('log:list', () => listLogFiles())
+
+  // 在线查看：读取指定日志文件内容（仅允许日期命名文件；非法/读取失败返回 null）
+  ipcMain.handle('log:read', (_e, name: unknown) => {
+    if (typeof name !== 'string') return null
+    return readLogFile(name)
+  })
 }

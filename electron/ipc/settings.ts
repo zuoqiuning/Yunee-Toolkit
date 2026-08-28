@@ -94,6 +94,52 @@ function isProtectedDir(abs: string): boolean {
   return candidates.some((d) => abs.toLowerCase() === path.resolve(d).toLowerCase())
 }
 
+/** 数值钳制到合法区间，非法输入回退默认值（临时文件保留天数用，默认 7） */
+function clampInt(value: unknown, fallback: number, min: number, max: number): number {
+  const n = Number(value)
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, Math.trunc(n))) : fallback
+}
+
+/**
+ * 按保留天数清理临时目录中的“残留条目”（文件或子目录）。
+ * 仅删除修改时间早于 cutoff 的条目——正在使用的文件 mtime 为近期，不会误删；
+ * 目录不存在 / 非目录 / 受保护目录一律跳过（防误删系统目录）。
+ * 返回本次移除的条目数；并发删除采用「独立结果 + 汇总」，避免共享计数丢失写入。
+ */
+async function cleanTempByAge(dir: string, retainDays: number): Promise<number> {
+  const abs = path.resolve(dir)
+  let st: fs.Stats
+  try {
+    st = fs.statSync(abs)
+  } catch {
+    return 0
+  }
+  if (!st.isDirectory() || isProtectedDir(abs)) return 0
+  let entries: fs.Dirent[]
+  try {
+    entries = await fs.promises.readdir(abs, { withFileTypes: true })
+  } catch {
+    return 0
+  }
+  const cutoff = Date.now() - retainDays * 24 * 60 * 60 * 1000
+  const results = await Promise.all(
+    entries.map(async (entry) => {
+      const full = path.join(abs, entry.name)
+      try {
+        const mtime = (await fs.promises.stat(full)).mtimeMs
+        if (mtime < cutoff) {
+          await fs.promises.rm(full, { recursive: true, force: true })
+          return 1
+        }
+      } catch {
+        // 单个条目失败（如被占用）跳过，不影响其余
+      }
+      return 0
+    }),
+  )
+  return results.reduce((a, b) => a + b, 0)
+}
+
 /**
  * 判断 child 路径是否位于 parent 目录内部（用于“软件本身”扣除重叠占用）。
  * 允许嵌套：bin / 默认输出目录都可能在应用目录内部；外部目录（如文档/自定义）
@@ -145,6 +191,30 @@ export function registerSettingsIpc(): void {
     })
     const picked = res.canceled || !res.filePaths.length ? null : res.filePaths[0]
     logInfo('ipc', `目录选择${picked ? `：${picked}` : '已取消'}`)
+    return picked
+  })
+
+  // 文件选择对话框：返回选中的文件路径，取消返回 null（供转换功能选择输入文件）
+  ipcMain.handle('dialog:select-file', async (event, filters: unknown) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+    // 仅接受合法的过滤器数组，非法时使用默认“所有文件”
+    const fileFilters =
+      Array.isArray(filters) && filters.length
+        ? (filters as { name: string; extensions: string[] }[]).filter(
+            (f) =>
+              f && typeof f.name === 'string' &&
+              Array.isArray(f.extensions) &&
+              f.extensions.every((e) => typeof e === 'string'),
+          )
+        : [{ name: '所有文件', extensions: ['*'] }]
+    const res = await dialog.showOpenDialog(win, {
+      title: '选择文件',
+      properties: ['openFile'],
+      filters: fileFilters,
+    })
+    const picked = res.canceled || !res.filePaths.length ? null : res.filePaths[0]
+    logInfo('ipc', `文件选择${picked ? `：${picked}` : '已取消'}`)
     return picked
   })
 
@@ -248,5 +318,19 @@ export function registerSettingsIpc(): void {
       return false
     }
     return true
+  })
+
+  // 同步临时文件自动清理配置（目录 + 开关 + 保留天数）：
+  // 渲染进程启动时（及设置变更时）上报，主进程据此自动清理“残留”临时文件——
+  // 仅移除修改时间超过保留天数的条目，正在使用的文件 mtime 为近期不会被误删。
+  // 返回本次移除的条目数（未开启自动清理 / 目录无效时返回 0）。
+  ipcMain.handle('storage:sync-temp-clean', async (_e, dir: unknown, autoClean: unknown, retainDays: unknown) => {
+    const tempDir = typeof dir === 'string' && dir.trim() ? dir.trim() : ''
+    const auto = autoClean === true
+    const days = clampInt(retainDays, 7, 1, 365)
+    if (!auto || !tempDir) return 0
+    const removed = await cleanTempByAge(tempDir, days)
+    logInfo('storage', `自动清理残留临时文件：移除 ${removed} 个超过 ${days} 天的条目（${tempDir}）`)
+    return removed
   })
 }

@@ -2,7 +2,7 @@
 <!--
   启动加载小窗口（Splash）页面
   职责：软件启动时展示数据预加载进度，让用户直观看到启动阶段在做的准备工作。
-  软件：白色主题 + 简洁圆角（与主窗口一致，弧度同 Arco 模态框）+ Arco Design 组件
+  软件：白色主题 + Windows 系统圆角（与主窗口一致）+ Arco Design 组件
        （a-progress / a-tag）；无任何 emoji，图标全部使用内联 SVG；页面不经过构建，
        本地引用 vendor 中的 Vue 与 Arco UMD 产物，仅通过白名单事件通道 'splash:task'
        接收主进程推送。
@@ -37,32 +37,19 @@
         --primary: #165dff;
         --fill-1: #f2f3f5;
         --border: #e5e6eb;
-        /* 与主应用 Arco 模态框圆角弧度一致（--border-radius-medium） */
-        --radius: 4px;
       }
       body {
         font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
-        /* 透明窗口：圆角外的四周留边区域露出桌面，需保持透明 */
-        background: transparent;
+        /* 不透明窗口：背景直接铺满，窗口圆角/阴影由系统绘制（与主窗口同方案） */
+        background: #ffffff;
         color: var(--text-1);
         overflow: hidden;
         user-select: none;
       }
-      /* 圆角外壳：四周留边 + 圆角 + 自绘阴影，形态与主窗口一致 */
-      .shell {
-        height: calc(100vh - 16px);
-        margin: 8px;
-        border-radius: var(--radius);
-        background: #ffffff;
-        overflow: hidden;
-        box-shadow:
-          0 8px 24px rgba(15, 23, 42, 0.14),
-          0 2px 6px rgba(15, 23, 42, 0.08);
-      }
       .splash {
         display: flex;
         flex-direction: column;
-        height: 100%;
+        height: 100vh;
         padding: 26px 30px 20px;
       }
 
@@ -169,9 +156,7 @@
   </head>
   <body>
     <div id="app">
-      <!-- 圆角外壳：承接透明窗口的圆角 + 阴影 -->
-      <div class="shell">
-        <div class="splash">
+      <div class="splash">
         <!-- 品牌区 -->
         <div class="brand">
           <img class="brand__logo" src="../icon.ico" alt="logo" draggable="false" />
@@ -196,7 +181,6 @@
         <div class="status-area">
           <a-spin :size="15" :style="{ color: 'var(--primary)' }" />
           <div class="status-area__text">{{ statusText }}</div>
-        </div>
         </div>
       </div>
     </div>

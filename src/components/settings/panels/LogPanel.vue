@@ -3,8 +3,9 @@
   职责：日志存储目录、日志输出（固定调试级全量记录）与日志自动清理规则设置。
   设计：
     - 日志存储：选择/打开日志目录（留空使用默认目录）。
-    - 日志输出：固定为「调试（全量记录）」，不再提供档位选择，便于排查错误与 BUG。
-    - 日志清理：保留天数 + 文件数量上限双规则，超限自动清理；可一键立即清理。
+  - 日志输出：固定为「调试（全量记录）」，不再提供档位选择，便于排查错误与 BUG。
+  - 日志清理：保留天数 + 文件数量上限双规则，超限自动清理；可一键立即清理。
+  - 日志查看：应用内直接查看各日期日志文件（复用关于页协议模态框的排版风格）。
   说明：清理规则与目录通过 App.vue 实时同步到主进程，切换即生效。
 -->
 <script setup lang="ts">
@@ -18,6 +19,72 @@ const settings = useSettingsStore()
 
 /** 立即清理按钮的加载态 */
 const cleaning = ref(false)
+
+// —— 日志在线查看模态框状态 ——
+const viewerVisible = ref(false)
+/** 日志文件列表（按日期倒序） */
+const logFiles = ref<LogFileInfo[]>([])
+/** 当前选中的日志文件名 */
+const selectedName = ref('')
+/** 日志内容 */
+const logContent = ref('')
+/** 列表/内容加载中 */
+const viewerLoading = ref(false)
+
+/** 今天的日期键（YYYY-MM-DD，用于默认选中今天日志） */
+function todayKey(): string {
+  const d = new Date()
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/** 打开日志查看模态框并加载列表 */
+async function openViewer() {
+  viewerVisible.value = true
+  await refreshLogs()
+}
+
+/** 刷新日志列表：拉取列表 → 默认选中今天 → 读取内容 */
+async function refreshLogs() {
+  viewerLoading.value = true
+  try {
+    const list = (await window.yuneeAPI?.listLogs()) ?? []
+    logFiles.value = list
+    // 优先保持当前选择；否则默认选中今天的日志（列表已按日期倒序，第一个即最新）
+    if (!list.some((f) => f.name === selectedName.value)) {
+      selectedName.value =
+        list.find((f) => f.date === todayKey())?.name ?? list[0]?.name ?? ''
+    }
+    await loadContent()
+  } catch {
+    logContent.value = '日志列表加载失败，请稍后重试。'
+  } finally {
+    viewerLoading.value = false
+  }
+}
+
+/** 读取当前选中日志文件的内容 */
+async function loadContent() {
+  if (!selectedName.value) {
+    logContent.value = '暂无日志文件，运行一段时间后会自动生成。'
+    return
+  }
+  viewerLoading.value = true
+  try {
+    const text = (await window.yuneeAPI?.readLog(selectedName.value)) ?? ''
+    logContent.value = text || '（该文件为空）'
+  } catch {
+    logContent.value = '日志内容读取失败，请稍后重试。'
+  } finally {
+    viewerLoading.value = false
+  }
+}
+
+/** 切换选中日志文件 */
+function onSelectLog(name: string | number) {
+  selectedName.value = String(name)
+  void loadContent()
+}
 
 /** 弹出目录选择框，选中后写入日志目录并通知（目录变化会自动同步主进程） */
 async function pickLogDir() {
@@ -138,7 +205,8 @@ function onResetClean() {
           :model-value="settings.logRetainDays"
           :min="1"
           :max="365"
-          :style="{ width: '160px' }"
+          mode="button"
+          :style="{ width: '320px' }"
           @change="onRetainChange"
         />
         <span class="log-clean__unit">天</span>
@@ -148,7 +216,8 @@ function onResetClean() {
           :model-value="settings.logMaxFiles"
           :min="10"
           :max="1000"
-          :style="{ width: '160px' }"
+          mode="button"
+          :style="{ width: '320px' }"
           @change="onMaxFilesChange"
         />
         <span class="log-clean__unit">个</span>

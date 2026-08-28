@@ -22,7 +22,7 @@ export const routes: RouteRecordRaw[] = [
         // 视频工具 - 格式转换
         path: 'video-convert',
         name: 'video-convert',
-        component: () => import('@/views/modules/VideoConvertView.vue'),
+        component: () => import('@/views/modules/video/VideoConvertView.vue'),
         meta: { title: '视频格式转换' },
       },
       {

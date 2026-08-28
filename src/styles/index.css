@@ -17,12 +17,18 @@ body,
   margin: 0;
   padding: 0;
   height: 100%;
+  /* 桌面应用：禁止页面级滚动（关键）。
+     否则 body 溢出时，滚动条会画在「窗口矩形边缘」即圆角外壳外的透明留边区，
+     呈直角裸露、破坏圆角观感；
+     滚动统一收敛到各内部容器（主内容区 layout__main / 侧边栏 / 模态框等）。 */
+  overflow: hidden;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
     'Helvetica Neue', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: var(--color-text-1);
+  /* 全局主背景：铺满窗口（不透明窗口方案，圆角/阴影由系统绘制） */
   background: var(--color-fill-2);
 }
 

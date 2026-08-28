@@ -1,14 +1,17 @@
 <!--
   设置面板：输出（目录与文件行为）
-  职责：默认输出目录、文件重名策略、完成动作、保留源文件；临时文件目录与管理；数据存储路径（只读）。
-  设计：使用 Arco Form + Card，分“输出位置 / 文件行为 / 临时文件 / 数据存储”四张卡片。
+  职责：默认输出目录、文件重名策略、完成动作、保留源文件、输出文件命名预设、完成/失败提示音；
+       临时文件目录与管理；数据存储路径（只读）。
+  设计：使用 Arco Form + Card，分“输出位置 / 文件行为 / 文件命名 / 提示音 / 临时文件 / 数据存储”卡片。
     - 目录选择通过主进程弹出系统目录对话框。
+    - 提示音通过 Web Audio API 合成，可即时“试听”。
 -->
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { Notification } from '@arco-design/web-vue'
 import { useSettingsStore } from '@/stores/settings'
 import { highlight } from '@/utils/notify'
+import { playCompleteSound, playErrorSound } from '@/utils/sounds'
 import CardResetButton from '../common/CardResetButton.vue'
 
 const settings = useSettingsStore()
@@ -120,6 +123,45 @@ function onKeepSourceChange(value: string | number | boolean) {
   })
 }
 
+/** 文件命名预设文案映射（含示例） */
+const fileNameLabels: Record<string, string> = {
+  keep: '保持原文件名',
+  'time-suffix': '追加时间戳（原名_20260829-153000）',
+  'time-prefix': '前置时间戳（20260829-153000_原名）',
+}
+
+/** 文件命名预设变更反馈 */
+function onFileNamePresetChange(value: unknown) {
+  const label = fileNameLabels[String(value)] ?? String(value)
+  Notification.success({
+    content: highlight(`输出文件命名预设已设为「${label}」。`),
+  })
+}
+
+/** 完成提示音开关变更反馈 */
+function onSoundCompleteChange(value: string | number | boolean) {
+  Notification.success({
+    content: highlight(value ? '已「开启」转换完成提示音。' : '已「关闭」转换完成提示音。'),
+  })
+}
+
+/** 失败提示音开关变更反馈 */
+function onSoundErrorChange(value: string | number | boolean) {
+  Notification.success({
+    content: highlight(value ? '已「开启」转换失败提示音。' : '已「关闭」转换失败提示音。'),
+  })
+}
+
+/** 试听：预览完成提示音 */
+function onPreviewComplete() {
+  playCompleteSound()
+}
+
+/** 试听：预览失败提示音 */
+function onPreviewError() {
+  playErrorSound()
+}
+
 /** 自动清理开关变更反馈 */
 function onAutoCleanChange(value: string | number | boolean) {
   Notification.success({
@@ -153,6 +195,16 @@ function onResetLocation() {
 /** 复位“文件行为”设置 */
 function onResetBehavior() {
   settings.resetFields(['overwritePolicy', 'completeAction', 'keepSource'])
+}
+
+/** 复位“文件命名”设置 */
+function onResetNaming() {
+  settings.resetFields(['fileNamePreset'])
+}
+
+/** 复位“提示音”设置 */
+function onResetSounds() {
+  settings.resetFields(['playSoundOnComplete', 'playSoundOnError'])
 }
 
 /** 复位“临时文件”设置 */
@@ -215,6 +267,37 @@ onMounted(fetchDataDir)
       </a-form-item>
     </a-card>
 
+    <!-- 文件命名 -->
+    <a-card class="panel__card" :bordered="true" size="small">
+      <template #title>文件命名</template>
+      <template #extra><CardResetButton name="文件命名" @reset="onResetNaming" /></template>
+      <a-form-item label="命名预设" extra="转换后输出文件的命名方式；时间戳取自转换时刻">
+        <a-radio-group
+          :model-value="settings.fileNamePreset"
+          type="button"
+          @change="onFileNamePresetChange"
+        >
+          <a-radio value="keep">保持原文件名</a-radio>
+          <a-radio value="time-suffix">追加时间戳</a-radio>
+          <a-radio value="time-prefix">前置时间戳</a-radio>
+        </a-radio-group>
+      </a-form-item>
+    </a-card>
+
+    <!-- 提示音 -->
+    <a-card class="panel__card" :bordered="true" size="small">
+      <template #title>提示音</template>
+      <template #extra><CardResetButton name="提示音" @reset="onResetSounds" /></template>
+      <a-form-item label="转换完成" extra="任务成功结束时播放提示音">
+        <a-switch v-model="settings.playSoundOnComplete" @change="onSoundCompleteChange" />
+        <a-button class="sound__preview" size="mini" @click="onPreviewComplete">试听</a-button>
+      </a-form-item>
+      <a-form-item label="转换失败" extra="任务失败时播放提示音">
+        <a-switch v-model="settings.playSoundOnError" @change="onSoundErrorChange" />
+        <a-button class="sound__preview" size="mini" @click="onPreviewError">试听</a-button>
+      </a-form-item>
+    </a-card>
+
     <!-- 临时文件 -->
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>临时文件</template>
@@ -247,7 +330,8 @@ onMounted(fetchDataDir)
           v-model="settings.cleanRetainDays"
           :min="0"
           :max="365"
-          style="width: 140px"
+          mode="button"
+          style="width: 320px"
           @change="onRetainDaysChange"
         >
           <template #suffix>天</template>
@@ -284,5 +368,10 @@ onMounted(fetchDataDir)
 
 .panel__card :deep(.arco-card-body) {
   padding: 8px 8px 0;
+}
+
+/* 提示音“试听”按钮与开关之间的间距 */
+.sound__preview {
+  margin-left: 12px;
 }
 </style>

@@ -122,15 +122,12 @@ async function onViewLicense(key: string, name: string) {
     <div v-if="licenseLoading" class="license__loading">
       <a-spin />
     </div>
-    <!-- 排版组件逐段渲染协议正文：宽度收敛居中 + 两端对齐，改善“整段靠左”的生硬观感 -->
+    <!-- 排版容器 + 段落逐段渲染：宽度收敛居中 + 两端对齐，改善“整段靠左”的生硬观感；
+      段落用原生 p 承载（Arco Paragraph 无独立样式目录，避免按需导入解析失败） -->
     <a-typography v-else class="license__body">
-      <a-paragraph
-        v-for="(para, idx) in licenseParagraphs"
-        :key="idx"
-        :spacing="'extended'"
-      >
+      <p v-for="(para, idx) in licenseParagraphs" :key="idx" class="license__para">
         {{ para }}
-      </a-paragraph>
+      </p>
     </a-typography>
     <template #footer>
       <a-button type="primary" @click="licenseVisible = false">知道了</a-button>
@@ -280,11 +277,11 @@ async function onViewLicense(key: string, name: string) {
 }
 
 /* 段落间距统一：最后一段贴底 */
-.license__body :deep(.arco-typography) {
+.license__body .license__para {
   margin: 0 0 14px;
 }
 
-.license__body :deep(.arco-typography:last-child) {
+.license__body .license__para:last-child {
   margin-bottom: 0;
 }
 </style>

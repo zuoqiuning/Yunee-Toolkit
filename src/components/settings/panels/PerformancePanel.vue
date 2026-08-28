@@ -189,7 +189,8 @@ function onResetResources() {
           v-model="settings.threadCount"
           :min="0"
           :max="cpu.maxThreads"
-          style="width: 140px"
+          mode="button"
+          style="width: 320px"
           @change="onThreadsChange"
         >
           <template #suffix>核</template>
