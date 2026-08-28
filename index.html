@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- 适配 Electron 窗口缩放 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Yunee Toolkit</title>
+    <!-- 应用图标（与桌面/任务栏图标一致） -->
+    <link rel="icon" type="image/x-icon" href="/icon.ico" />
+    <!--
+      内容安全策略（CSP）：仅允许加载应用自身资源，杜绝远程脚本/样式注入。
+      - script-src 'self'：只允许页面自身 JS（Vite 构建产物均为本地文件）；
+      - style-src 'unsafe-inline'：Arco 组件需注入内联样式；
+      - connect-src 放行本地端口：Vite 开发服务器 HMR（WebSocket）白名单。
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:5173 ws://localhost:5173; object-src 'none'; base-uri 'self'"
+    />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

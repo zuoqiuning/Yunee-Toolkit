@@ -1,0 +1,184 @@
+/**
+ * 全局样式
+ * 职责：定义应用级基础样式规范（跟随 Arco 主题：浅色 / 深色）。
+ * 说明：全部颜色引用 Arco CSS 变量，主题切换（body 的 arco-theme 属性）自动生效。
+ */
+
+/* ---------- 基础 Reset ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    'Helvetica Neue', Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--color-text-1);
+  background: var(--color-fill-2);
+}
+
+/* 主题（浅色/深色）切换的平滑过渡 */
+body {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* 内容区背景变量：按主题区分，形成层次
+   浅色：浅灰蓝，与白色卡片区分；深色：深灰，与深色面板区分 */
+body[arco-theme='light'] {
+  --content-bg: #f4f6f9;
+}
+body[arco-theme='dark'] {
+  --content-bg: #1e1f22;
+}
+
+/* 内容区使用主题背景变量 */
+.layout__main {
+  background: var(--content-bg);
+}
+
+/* ---------- Arco 按钮图标垂直居中 ---------- */
+/* 图标槽位改为 flex 纵向居中，保证带图标的按钮（icon + 文字）图标始终居中 */
+.arco-btn .arco-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+.arco-btn .arco-btn-icon svg {
+  display: block;
+}
+
+/* ---------- 标题栏：深色主题与左侧导航同色 ---------- */
+/* 浅色主题标题栏用 --color-bg-1（与浅色导航一致）；深色主题固定为导航深色 #232324 */
+body[arco-theme='dark'] .titlebar {
+  background: #232324;
+}
+
+/* ---------- 通知卡片 ---------- */
+/* 单行提醒：宽度随内容自适应（不超上限），图标居左，正文剩余区域垂直+水平居中 */
+.arco-notification {
+  min-width: 320px;
+  max-width: 520px;
+  width: fit-content;
+}
+.arco-notification .arco-notification-main {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+}
+/* 图标列：固定宽度、不缩放、垂直居中 */
+.arco-notification .arco-notification-main-content {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+/* 正文包裹区：占满剩余宽度，单行居中 */
+.arco-notification .arco-notification-content-wrapper {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+/* 未提供标题时不占位，避免出现“两行”错觉 */
+.arco-notification .arco-notification-title:empty {
+  display: none;
+}
+.arco-notification .arco-notification-content {
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* 「变量」高亮：仅换色强调（不加粗），颜色随主题主色自适应 */
+.notify-hl {
+  color: var(--color-primary-6);
+}
+
+/* ---------- 侧边栏折叠/展开按钮反馈 ---------- */
+/* Arco sider 自带折叠触发器：增加过渡与 hover/active 反馈，深/浅色自适应 */
+.arco-layout-sider-trigger {
+  transition: background-color 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+}
+.arco-layout-sider-trigger:hover {
+  background: var(--color-fill-2);
+}
+.arco-layout-sider-trigger:active {
+  background: var(--color-fill-3);
+}
+
+/* 隐藏滚动条但仍可滚动（可选，保持界面整洁） */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-fill-3);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fill-4);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------- 开源协议模态框：标题栏 / 底部栏 与内容区视觉分区 ---------- */
+/* 浅色底 + 描边分隔：头尾形成独立区域，中间正文区保持留白，提升观感层次 */
+.license-modal .arco-modal-header {
+  margin: 0;
+  padding: 14px 20px;
+  background: var(--color-fill-1);
+  border-bottom: 1px solid var(--color-border-2);
+}
+
+.license-modal .arco-modal-header .arco-modal-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+.license-modal .arco-modal-footer {
+  padding: 12px 20px;
+  background: var(--color-fill-1);
+  border-top: 1px solid var(--color-border-2);
+}
+
+/* ---------- 设置面板卡片标题栏统一样式 ---------- */
+/* 各设置面板（.panel__card）的卡片标题栏：浅色底 + 底部描边，跟随浅色/深色主题自适应 */
+.panel__card > .arco-card-header {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  background: var(--color-fill-1);
+  border-bottom: 1px solid var(--color-border-2);
+  color: var(--color-text-1);
+}
+
+.panel__card > .arco-card-header .arco-card-header-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-1);
+}
+
+/* ---------- 设置面板路径输入框统一样式 ---------- */
+/* 所有路径显示框（输出/临时/日志目录等）统一固定宽度，避免各面板宽窄不一 */
+.panel__dir-group {
+  width: 420px;
+}
+
+.panel__dir-group .arco-input-group-prepend,
+.panel__dir-group .arco-input-group-append {
+  white-space: nowrap;
+}

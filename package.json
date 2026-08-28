@@ -1,0 +1,82 @@
+{
+  "name": "yuneetoolkit",
+  "version": "0.1.0",
+  "description": "屿宁工具箱 (Yunee Toolkit) —— 集众开源之力，一站式处理音视频、图片、文档、PDF 的本地万能工具箱。当前聚焦 FFmpeg 音视频套件。",
+  "private": true,
+  "author": "丘屿知宁",
+  "main": "dist-electron/main/index.js",
+  "scripts": {
+    "dev": "vite",
+    "type-check": "vue-tsc --noEmit",
+    "build": "pnpm type-check && vite build",
+    "preview": "vite preview",
+    "electron:main:build": "esbuild electron/main/index.ts electron/preload/index.ts --bundle --outdir=dist-electron --platform=node --target=node24 --external:electron --external:better-sqlite3 --external:express",
+    "electron:dev": "pnpm electron:main:build && concurrently -k \"pnpm:dev\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "node scripts/clean.mjs && pnpm build && pnpm electron:main:build && electron-builder"
+  },
+  "dependencies": {
+    "@arco-design/web-vue": "^2.58.0",
+    "better-sqlite3": "^13.0.3",
+    "echarts": "^6.1.0",
+    "express": "^5.2.1",
+    "pinia": "^4.0.2",
+    "vue": "^3.5.41",
+    "vue-echarts": "^8.1.0",
+    "vue-router": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/express": "^5.0.0",
+    "@types/node": "^24.10.0",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.0",
+    "nodemon": "^3.1.0",
+    "typescript": "^5.9.0",
+    "unplugin-auto-import": "^0.18.3",
+    "unplugin-vue-components": "^0.27.4",
+    "vite": "^8.1.5",
+    "vue-tsc": "^2.1.10",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.yunee.yuneetoolkit",
+    "productName": "YuneeToolkit",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico",
+      "artifactName": "YuneeToolkit-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "bin/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "bin/**/*",
+      "node_modules/better-sqlite3/**/*"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "better-sqlite3",
+      "electron",
+      "electron-winstaller"
+    ]
+  }
+}

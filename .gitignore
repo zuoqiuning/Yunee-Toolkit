@@ -1,0 +1,36 @@
+# 依赖
+node_modules/
+pnpm-lock.yaml
+
+# pnpm 本地缓存/存储（重定向到项目内）
+.pnpm-store/
+.pnpm-cache/
+.pnpm-state/
+
+# 构建产物
+dist/
+dist-electron/
+release/
+
+# 内置工具二进制（FFmpeg 等约 300MB，开源仓库不纳入；从官方构建下载后放入 bin/）
+bin/
+
+# 运行时默认输出/临时目录
+output/
+tempfiles/
+
+# 用户数据（开发环境重定向到项目 data）
+data/
+
+# 日志
+*.log
+npm-debug.log*
+
+# 环境与编辑器
+.env
+.env.local
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

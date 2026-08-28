@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<!--
+  启动加载小窗口（Splash）页面
+  职责：软件启动时展示数据预加载进度，让用户直观看到启动阶段在做的准备工作。
+  软件：白色主题 + 简洁圆角（与主窗口一致，弧度同 Arco 模态框）+ Arco Design 组件
+       （a-progress / a-tag）；无任何 emoji，图标全部使用内联 SVG；页面不经过构建，
+       本地引用 vendor 中的 Vue 与 Arco UMD 产物，仅通过白名单事件通道 'splash:task'
+       接收主进程推送。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      仅允许本地资源与内联脚本（本页无任何网络请求）。
+      注意：Vue 完整版编译模板（{{ }} / v-for 等）依赖 eval/new Function，
+            因此 script-src 必须包含 'unsafe-eval'，否则挂载会抛 EvalError 导致白屏。
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'self'"
+    />
+    <title>Yunee Toolkit</title>
+    <!-- 本地 Arco 样式（与主应用组件库同源，保证风格统一） -->
+    <link rel="stylesheet" href="./vendor/arco.min.css" />
+    <style>
+      /* 不再全局强制直角：窗口圆角由下方 .shell 容器承接，内部控件保持简洁 */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --text-1: #1d2129;
+        --text-2: #4e5969;
+        --text-3: #86909c;
+        --primary: #165dff;
+        --fill-1: #f2f3f5;
+        --border: #e5e6eb;
+        /* 与主应用 Arco 模态框圆角弧度一致（--border-radius-medium） */
+        --radius: 4px;
+      }
+      body {
+        font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        /* 透明窗口：圆角外的四周留边区域露出桌面，需保持透明 */
+        background: transparent;
+        color: var(--text-1);
+        overflow: hidden;
+        user-select: none;
+      }
+      /* 圆角外壳：四周留边 + 圆角 + 自绘阴影，形态与主窗口一致 */
+      .shell {
+        height: calc(100vh - 16px);
+        margin: 8px;
+        border-radius: var(--radius);
+        background: #ffffff;
+        overflow: hidden;
+        box-shadow:
+          0 8px 24px rgba(15, 23, 42, 0.14),
+          0 2px 6px rgba(15, 23, 42, 0.08);
+      }
+      .splash {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 26px 30px 20px;
+      }
+
+      /* —— 顶部品牌区 —— */
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+      .brand__logo {
+        width: 46px;
+        height: 46px;
+        flex-shrink: 0;
+        object-fit: contain;
+      }
+      .brand__title {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+      .brand__sub {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--text-3);
+      }
+
+      /* —— 任务列表 —— */
+      .tasks {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 14px;
+      }
+      .task {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 34px;
+        padding: 0 14px;
+        border: 1px solid var(--border);
+        background: #ffffff;
+        transition: border-color 0.25s ease, background 0.25s ease;
+      }
+      .task.running {
+        border-color: var(--primary);
+      }
+      .task.done {
+        border-color: transparent;
+        background: var(--fill-1);
+      }
+      /* 左侧状态图标（SVG） */
+      .task__icon {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        color: var(--text-3);
+      }
+      .task__icon svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      .task.running .task__icon {
+        color: var(--primary);
+      }
+      .task.running .task__icon svg {
+        animation: spin 1s linear infinite;
+      }
+      .task.done .task__icon {
+        color: #00b42a;
+      }
+      .task__label {
+        flex: 1;
+        font-size: 13px;
+        color: var(--text-2);
+      }
+      .task.running .task__label {
+        color: var(--text-1);
+        font-weight: 500;
+      }
+
+      /* —— 底部加载状态区 —— */
+      .status-area {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 22px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border);
+      }
+      .status-area__text {
+        font-size: 12px;
+        color: var(--text-3);
+      }
+
+      /* 加载中图标的旋转动画 */
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- 圆角外壳：承接透明窗口的圆角 + 阴影 -->
+      <div class="shell">
+        <div class="splash">
+        <!-- 品牌区 -->
+        <div class="brand">
+          <img class="brand__logo" src="../icon.ico" alt="logo" draggable="false" />
+          <div>
+            <div class="brand__title">Yunee Toolkit</div>
+            <div class="brand__sub">{{ version }}</div>
+          </div>
+        </div>
+
+        <!-- 预加载任务列表 -->
+        <div class="tasks">
+          <div v-for="t in tasks" :key="t.id" class="task" :class="t.state">
+            <div class="task__icon" v-html="t.icon"></div>
+            <span class="task__label">{{ t.label }}</span>
+            <a-tag :color="STATE_COLOR[t.state]" :bordered="false" size="small">
+              {{ STATE_TEXT[t.state] }}
+            </a-tag>
+          </div>
+        </div>
+
+        <!-- 底部加载状态（Arco Spin + 当前任务文案，替代固定进度条） -->
+        <div class="status-area">
+          <a-spin :size="15" :style="{ color: 'var(--primary)' }" />
+          <div class="status-area__text">{{ statusText }}</div>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 本地 Vue + Arco UMD（无远程依赖） -->
+    <script src="./vendor/vue.global.prod.js"></script>
+    <script src="./vendor/arco-vue.min.js"></script>
+    <script>
+      // 各任务的左侧图标（内联 SVG，承载运行中旋转 / 完成变绿的视觉状态）
+      var ICONS = {
+        storage: '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 5.5h11l1.7-3H.8l1.7 3z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M2.5 5.5v5.5c0 .8.7 1.5 1.5 1.5h8c.8 0 1.5-.7 1.5-1.5V5.5" stroke="currentColor" stroke-width="1.2"/><circle cx="11" cy="9.5" r="1" fill="currentColor"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/><circle cx="5" cy="9.5" r="1" fill="currentColor"/></svg>',
+        tools: '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="12" height="12" stroke="currentColor" stroke-width="1.2"/><path d="M6.2 10.5V5.5l3.6 2.5-3.6 2.5z" fill="currentColor"/></svg>',
+        gpu: '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="5" width="13" height="6" stroke="currentColor" stroke-width="1.2"/><rect x="5" y="7" width="6" height="2" fill="currentColor"/><path d="M4 3h2v2H4zM9.5 3h2v2h-2zM3.5 4.5h1v1h-1zM11 4.5h1v1h-1z" fill="currentColor"/></svg>',
+        cpu: '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4.5" y="4.5" width="7" height="7" stroke="currentColor" stroke-width="1.2"/><rect x="6.5" y="6.5" width="3" height="3" fill="currentColor"/><path d="M6 2v2.5M8 2v2.5M10 2v2.5M6 11.5V14M8 11.5V14M10 11.5V14M2 6h2.5M2 8h2.5M2 10h2.5M11.5 6H14M11.5 8H14M11.5 10H14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+      }
+
+      // 任务状态 → Arco Tag 颜色 / 中文文案
+      var STATE_COLOR = { pending: 'gray', running: 'blue', done: 'green', error: 'red' }
+      var STATE_TEXT = { pending: '等待中', running: '加载中', done: '完成', error: '失败' }
+
+      // 任务列表与主进程 getStartupTasks() 保持一致（工具任务 id 为 tools，可容纳多工具）
+      var TASKS = [
+        { id: 'storage', label: '统计磁盘占用', icon: ICONS.storage },
+        { id: 'tools', label: '探测内置工具', icon: ICONS.tools },
+        { id: 'gpu', label: '检测显卡信息', icon: ICONS.gpu },
+        { id: 'cpu', label: '检测 CPU 信息', icon: ICONS.cpu },
+      ]
+
+      Vue.createApp({
+        data: function () {
+          return {
+            version: '屿宁工具箱 · beta 0.1.0',
+            tasks: TASKS.map(function (t) {
+              return { id: t.id, label: t.label, icon: t.icon, state: 'pending' }
+            }),
+            STATE_COLOR: STATE_COLOR,
+            STATE_TEXT: STATE_TEXT,
+          }
+        },
+        computed: {
+          // 当前正在执行的任务（底部加载状态文案用）
+          currentTask: function () {
+            var running = this.tasks.filter(function (t) { return t.state === 'running' })
+            return running.length ? running[0].label : ''
+          },
+          // 底部加载状态文案：有任务在跑则提示当前任务，否则通用提示
+          statusText: function () {
+            return this.currentTask
+              ? '正在加载「' + this.currentTask + '」…'
+              : '正在加载数据，请稍候…'
+          },
+        },
+        mounted: function () {
+          var self = this
+          // 通过安全桥接拉取真实版本号（失败时保留静态兜底文案）
+          if (window.yuneeAPI && window.yuneeAPI.getAppVersion) {
+            window.yuneeAPI.getAppVersion().then(function (v) {
+              if (v) self.version = '屿宁工具箱 · beta ' + v
+            }).catch(function () {})
+          }
+          // 订阅主进程推送的任务状态，更新列表（文案跟随主进程注册表生成）
+          if (window.yuneeAPI && window.yuneeAPI.onMainEvent) {
+            window.yuneeAPI.onMainEvent('splash:task', function (payload) {
+              var t = payload || {}
+              var task = self.tasks.find(function (x) { return x.id === t.id })
+              if (!task) return
+              if (t.label) task.label = t.label
+              task.state = t.state || 'pending'
+            })
+          }
+        },
+      }).use(ArcoVue).mount('#app')
+    </script>
+  </body>
+</html>
