@@ -73,7 +73,7 @@ function onReset() {
       <!-- 选项卡导航 -->
       <a-tabs
         v-model:active-key="activeTab"
-        type="line"
+        type="card-gutter"
         class="modal__tabs"
         :destroy-on-hide="false"
       >
@@ -123,7 +123,18 @@ function onReset() {
 /* 选项卡固定在上部 */
 .modal__tabs {
   flex-shrink: 0;
-  padding: 0 16px;
+  padding: 12px 16px 0;
+}
+
+/* 卡片式页签容器：浅灰衬底，贴合项目纯直角风格 */
+.modal__tabs :deep(.arco-tabs-header-nav) {
+  background-color: var(--color-fill-2);
+  border-radius: 0;
+}
+
+/* 页签本身保持直角 */
+.modal__tabs :deep(.arco-tabs-tab) {
+  border-radius: 0;
 }
 
 .modal__tabs :deep(.arco-tabs-content) {

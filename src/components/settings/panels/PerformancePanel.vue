@@ -191,11 +191,10 @@ function onResetResources() {
           :min="0"
           :max="cpu.maxThreads"
           mode="button"
-          :style="{ width: fitNumberInputWidth(settings.threadCount, '核') }"
+          :style="{ width: fitNumberInputWidth(settings.threadCount) }"
           @change="onThreadsChange"
-        >
-          <template #suffix>核</template>
-        </a-input-number>
+        />
+        <span class="threads__unit">核</span>
       </a-form-item>
 
       <a-form-item label="任务优先级" extra="影响转码进程在系统中的调度优先级">
@@ -218,5 +217,11 @@ function onResetResources() {
 
 .panel__card :deep(.arco-card-body) {
   padding: 8px 8px 0;
+}
+
+/* 编码线程数单位：置于输入框外侧，与其它面板（天/个）保持一致 */
+.threads__unit {
+  margin-left: 8px;
+  color: var(--color-text-3);
 }
 </style>

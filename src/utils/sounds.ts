@@ -388,6 +388,60 @@ export const CLICK_SOUNDS: SoundPreset[] = [
       { freq: 1318.51, start: 0.05, type: 'sine', duration: 0.08, volume: 0.04, attack: 0.03 }, // E6
     ],
   },
+  {
+    id: 'paper',
+    label: '纸页轻翻',
+    desc: '极短的柔和弱音，像轻轻翻过一页纸',
+    tones: [
+      { freq: 700, start: 0, type: 'triangle', duration: 0.04, volume: 0.06, attack: 0.01 },
+      { freq: 500, start: 0.02, type: 'triangle', duration: 0.05, volume: 0.04, attack: 0.01 },
+    ],
+  },
+  {
+    id: 'wooden',
+    label: '木块轻敲',
+    desc: '低频短促的敲击，沉稳朴实',
+    tones: [
+      { freq: 320, start: 0, type: 'triangle', duration: 0.05, volume: 0.1, attack: 0.005 },
+      { freq: 180, start: 0.01, type: 'triangle', duration: 0.07, volume: 0.06, attack: 0.005 },
+    ],
+  },
+  {
+    id: 'clock',
+    label: '时钟滴答',
+    desc: '干净利落的一声滴答，克制安静',
+    tones: [{ freq: 1000, start: 0, type: 'triangle', duration: 0.03, volume: 0.08, attack: 0.005 }],
+  },
+  {
+    id: 'bell',
+    label: '铃铛轻碰',
+    desc: '细小的铃铛一声轻响，清亮不吵',
+    tones: [
+      { freq: 1567.98, start: 0, type: 'sine', duration: 0.15, volume: 0.08, attack: 0.005 }, // G6
+      { freq: 2349.32, start: 0.02, type: 'sine', duration: 0.12, volume: 0.03, attack: 0.005 }, // D7 泛音
+    ],
+  },
+  {
+    id: 'key',
+    label: '柔和按键',
+    desc: '键盘般的轻柔按压感，日常自然',
+    tones: [{ freq: 850, start: 0, type: 'triangle', duration: 0.035, volume: 0.08, attack: 0.005 }],
+  },
+  {
+    id: 'piano',
+    label: '钢琴轻点',
+    desc: '单音钢琴轻点一下，干净优雅',
+    tones: [{ freq: 523.25, start: 0, type: 'triangle', duration: 0.12, volume: 0.1, attack: 0.008 }], // C5
+  },
+  {
+    id: 'raindot',
+    label: '雨点轻触',
+    desc: '两滴轻巧的雨点，湿润温和',
+    tones: [
+      { freq: 1100, start: 0, type: 'sine', duration: 0.04, volume: 0.05, attack: 0.01 },
+      { freq: 900, start: 0.03, type: 'sine', duration: 0.04, volume: 0.04, attack: 0.01 },
+    ],
+  },
 ]
 
 /**

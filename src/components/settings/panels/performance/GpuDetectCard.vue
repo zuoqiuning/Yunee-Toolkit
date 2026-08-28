@@ -1,16 +1,17 @@
 <!--
   显卡检测卡片 GpuDetectCard
   职责：在「性能」设置面板中展示主进程检测到的显卡信息：
-        检测状态 → 显卡卡片列表（品牌 + 型号）→ 推荐/已自动设置的加速方案提示。
+        检测状态 → 显卡表格（品牌 / 型号 / 数量）→ 推荐 / 已自动设置的加速方案提示。
   设计：
-    - 每张显卡使用一张 Arco 卡片（bordered=false + hoverable）：标题为品牌、右上角为品牌色标签、
-      正文为显卡型号（含同型号数量标记），多卡并排展示；
-    - 卡片下方的辅助提示文字说明推荐/已自动选中的加速方案。
+    - 使用 Arco 表格（带网格线 + 醒目表头）逐行列出显卡，比卡片并排更整齐直观；
+    - 品牌列用品牌色标签（a-tag）标识，数量列在同型号多卡时显示 ×N；
+    - 表格下方的辅助提示文字说明推荐 / 已自动选中的加速方案。
   说明：纯展示组件；数据来自 hardware store（启动阶段已检测完毕，进入即得）；
         无 emoji，状态图标使用内联 SVG。
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
+import type { TableColumnData } from '@arco-design/web-vue'
 import { useHardwareStore } from '@/stores/hardware'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -33,6 +34,16 @@ const hwLabel: Record<string, string> = {
   amd: 'AMD',
   cpu: 'CPU',
 }
+
+/** 显卡表格列定义：品牌 / 型号 / 数量 */
+const gpuColumns: TableColumnData[] = [
+  { title: '显卡品牌', dataIndex: 'brand', slotName: 'brand', width: 130 },
+  { title: '显卡型号', dataIndex: 'name', slotName: 'name' },
+  { title: '数量', dataIndex: 'count', slotName: 'count', width: 90 },
+]
+
+/** 表格行数据：附加唯一行序号（Arco 表格要求每行有唯一 key） */
+const gpuRows = computed(() => hardware.gpus.map((g, i) => ({ ...g, _key: i })))
 
 /** 是否显示「已自动选择」提示：检测到推荐品牌且当前方案正好是推荐值 */
 const showAutoTip = computed(
@@ -59,33 +70,38 @@ const showAutoTip = computed(
       <span>未能检测到显卡信息，加速方案保持「自动」。</span>
     </div>
 
-    <!-- 有显卡信息：卡片列表 + 推荐提示 -->
+    <!-- 有显卡信息：表格 + 推荐提示 -->
     <div v-else>
-      <!-- 显卡卡片区（浅灰底衬，突出卡片） -->
-      <div class="gpu-detect__cards">
-        <a-card
-          v-for="(g, i) in hardware.gpus"
-          :key="i"
-          class="gpu-detect__card"
-          :title="brandMeta[g.brand]?.label ?? '未知'"
-          :bordered="false"
-          hoverable
-        >
-          <template #extra>
-            <span class="gpu-detect__brand" :style="{ color: brandMeta[g.brand]?.color }">
-              {{ brandMeta[g.brand]?.label ?? '未知' }}
-            </span>
-          </template>
-          <div class="gpu-detect__name">
-            {{ g.name }}
-            <template v-if="g.count > 1">
-              <span class="gpu-detect__x"> ×{{ g.count }}</span>
-            </template>
-          </div>
-        </a-card>
-      </div>
+      <!-- 显卡信息表格（网格线 + 醒目表头） -->
+      <a-table
+        class="gpu-detect__table"
+        :data="hardware.gpus"
+        :columns="gpuColumns"
+        :row-key="gpuRowKey"
+        :pagination="false"
+        :bordered="{ wrapper: true, cell: true }"
+        size="small"
+      >
+        <!-- 品牌列：品牌色标签 -->
+        <template #brand="{ record }">
+          <a-tag :color="brandMeta[record.brand]?.color" class="gpu-detect__tag">
+            {{ brandMeta[record.brand]?.label ?? '未知' }}
+          </a-tag>
+        </template>
 
-      <!-- 卡片下方的辅助提示 -->
+        <!-- 型号列：显卡型号（含同型号数量标记） -->
+        <template #name="{ record }">
+          <span class="gpu-detect__name">{{ record.name }}</span>
+        </template>
+
+        <!-- 数量列：同型号多卡显示 ×N -->
+        <template #count="{ record }">
+          <span v-if="record.count > 1" class="gpu-detect__x">×{{ record.count }}</span>
+          <span v-else class="gpu-detect__one">1</span>
+        </template>
+      </a-table>
+
+      <!-- 表格下方的辅助提示 -->
       <div class="gpu-detect__tip">
         <template v-if="showAutoTip">
           已根据你的显卡自动选择「{{ hwLabel[settings.hwAccel] }}」加速，可在下方修改。
@@ -118,36 +134,19 @@ const showAutoTip = computed(
   color: var(--color-text-3);
 }
 
-/* 显卡卡片区：浅灰底衬，卡片并排（超宽自动换行） */
-.gpu-detect__cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
+/* 显卡信息表格：铺满可用宽度 */
+.gpu-detect__table {
   width: 100%;
-  padding: 16px;
-  box-sizing: border-box;
-  background-color: var(--color-fill-2);
 }
 
-.gpu-detect__card {
-  width: 300px;
-  text-align: left;
+/* 品牌标签：品牌色填充，字号略小更内敛 */
+.gpu-detect__tag {
+  font-weight: 500;
 }
 
-.gpu-detect__card :deep(.arco-card-body) {
-  padding: 12px 16px 16px;
-}
-
-/* 右上角品牌色标签 */
-.gpu-detect__brand {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-
-/* 卡片正文：显卡型号 */
+/* 型号文本：左对齐、可折行 */
 .gpu-detect__name {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-1);
   line-height: 1.5;
   word-break: break-all;
@@ -157,6 +156,11 @@ const showAutoTip = computed(
 .gpu-detect__x {
   font-weight: 600;
   color: var(--color-text-2);
+}
+
+/* 单卡数量：弱化显示 */
+.gpu-detect__one {
+  color: var(--color-text-3);
 }
 
 .gpu-detect__chip {
@@ -170,7 +174,7 @@ const showAutoTip = computed(
   color: var(--color-text-4);
 }
 
-/* 推荐 / 自动设置提示（位于卡片下方） */
+/* 推荐 / 自动设置提示（位于表格下方） */
 .gpu-detect__tip {
   margin-top: 12px;
   font-size: 12px;
