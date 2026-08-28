@@ -38,6 +38,15 @@
         --fill-1: #f2f3f5;
         --border: #e5e6eb;
       }
+      /* 深色主题：主进程通过查询参数 dark=1 注入，首帧即为深色，避免白屏闪烁 */
+      body[arco-theme='dark'] {
+        --text-1: #f2f3f5;
+        --text-2: #c9cdd4;
+        --text-3: #6a6f77;
+        --primary: #4080ff;
+        --fill-1: #2e2f30;
+        --border: #3a3b3d;
+      }
       body {
         font-family: 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
         /* 不透明窗口：背景直接铺满，窗口圆角/阴影由系统绘制（与主窗口同方案） */
@@ -45,6 +54,10 @@
         color: var(--text-1);
         overflow: hidden;
         user-select: none;
+        transition: background-color 0.25s ease, color 0.25s ease;
+      }
+      body[arco-theme='dark'] {
+        background: #17171a;
       }
       .splash {
         display: flex;
@@ -101,6 +114,10 @@
       .task.done {
         border-color: transparent;
         background: var(--fill-1);
+      }
+      /* 深色主题下任务卡片底色跟随深色背景 */
+      body[arco-theme='dark'] .task {
+        background: #1f2022;
       }
       /* 左侧状态图标（SVG） */
       .task__icon {
@@ -189,6 +206,12 @@
     <script src="./vendor/vue.global.prod.js"></script>
     <script src="./vendor/arco-vue.min.js"></script>
     <script>
+      // 深色系统：依据主进程注入的查询参数（dark=1）同步设置深色主题。
+      // 必须在挂载 Vue 前执行，使首帧即为深色背景，避免加载页先白后黑的闪烁。
+      if (new URLSearchParams(location.search).get('dark') === '1') {
+        document.body.setAttribute('arco-theme', 'dark')
+      }
+
       // 各任务的左侧图标（内联 SVG，承载运行中旋转 / 完成变绿的视觉状态）
       var ICONS = {
         storage: '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 5.5h11l1.7-3H.8l1.7 3z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M2.5 5.5v5.5c0 .8.7 1.5 1.5 1.5h8c.8 0 1.5-.7 1.5-1.5V5.5" stroke="currentColor" stroke-width="1.2"/><circle cx="11" cy="9.5" r="1" fill="currentColor"/><circle cx="8" cy="9.5" r="1" fill="currentColor"/><circle cx="5" cy="9.5" r="1" fill="currentColor"/></svg>',

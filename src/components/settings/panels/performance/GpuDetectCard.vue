@@ -1,9 +1,13 @@
 <!--
   显卡检测卡片 GpuDetectCard
   职责：在「性能」设置面板中展示主进程检测到的显卡信息：
-        检测状态 → 显卡列表（品牌 + 型号）→ 推荐/已自动设置的加速方案提示。
-  设计：纯展示组件；数据来自 hardware store（启动阶段已检测完毕，进入即得）；
-        无 emoji，品牌/状态图标均使用内联 SVG。
+        检测状态 → 显卡卡片列表（品牌 + 型号）→ 推荐/已自动设置的加速方案提示。
+  设计：
+    - 每张显卡使用一张 Arco 卡片（bordered=false + hoverable）：标题为品牌、右上角为品牌色标签、
+      正文为显卡型号（含同型号数量标记），多卡并排展示；
+    - 卡片下方的辅助提示文字说明推荐/已自动选中的加速方案。
+  说明：纯展示组件；数据来自 hardware store（启动阶段已检测完毕，进入即得）；
+        无 emoji，状态图标使用内联 SVG。
 -->
 <script setup lang="ts">
 import { computed } from 'vue'
@@ -55,24 +59,33 @@ const showAutoTip = computed(
       <span>未能检测到显卡信息，加速方案保持「自动」。</span>
     </div>
 
-    <!-- 有显卡信息：列表 + 推荐提示 -->
+    <!-- 有显卡信息：卡片列表 + 推荐提示 -->
     <div v-else>
-      <div class="gpu-detect__list">
-        <div v-for="(g, i) in hardware.gpus" :key="i" class="gpu-detect__item">
-          <svg class="gpu-detect__chip" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="1.5" y="5" width="13" height="6" rx="1.2" stroke="currentColor" stroke-width="1.2" />
-            <rect x="5" y="7" width="6" height="2" fill="currentColor" />
-            <path d="M4 3h2v2H4zM9.5 3h2v2h-2zM3.5 4.5h1v1h-1zM11 4.5h1v1h-1z" fill="currentColor" />
-          </svg>
-          <span class="gpu-detect__brand" :style="{ color: brandMeta[g.brand]?.color }">
-            {{ brandMeta[g.brand]?.label ?? '未知' }}
-          </span>
-          <span class="gpu-detect__name">
-            {{ g.name }}<template v-if="g.count > 1"><span class="gpu-detect__x"> ×{{ g.count }}</span></template>
-          </span>
-        </div>
+      <!-- 显卡卡片区（浅灰底衬，突出卡片） -->
+      <div class="gpu-detect__cards">
+        <a-card
+          v-for="(g, i) in hardware.gpus"
+          :key="i"
+          class="gpu-detect__card"
+          :title="brandMeta[g.brand]?.label ?? '未知'"
+          :bordered="false"
+          hoverable
+        >
+          <template #extra>
+            <span class="gpu-detect__brand" :style="{ color: brandMeta[g.brand]?.color }">
+              {{ brandMeta[g.brand]?.label ?? '未知' }}
+            </span>
+          </template>
+          <div class="gpu-detect__name">
+            {{ g.name }}
+            <template v-if="g.count > 1">
+              <span class="gpu-detect__x"> ×{{ g.count }}</span>
+            </template>
+          </div>
+        </a-card>
       </div>
 
+      <!-- 卡片下方的辅助提示 -->
       <div class="gpu-detect__tip">
         <template v-if="showAutoTip">
           已根据你的显卡自动选择「{{ hwLabel[settings.hwAccel] }}」加速，可在下方修改。
@@ -87,10 +100,6 @@ const showAutoTip = computed(
 
 <style scoped>
 .gpu-detect {
-  border: 1px solid var(--color-border-2);
-  border-radius: 6px;
-  padding: 12px 14px;
-  background: var(--color-bg-2);
   width: 100%;
 }
 
@@ -109,17 +118,45 @@ const showAutoTip = computed(
   color: var(--color-text-3);
 }
 
-/* 显卡列表 */
-.gpu-detect__list {
+/* 显卡卡片区：浅灰底衬，卡片并排（超宽自动换行） */
+.gpu-detect__cards {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  background-color: var(--color-fill-2);
 }
 
-.gpu-detect__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.gpu-detect__card {
+  width: 300px;
+  text-align: left;
+}
+
+.gpu-detect__card :deep(.arco-card-body) {
+  padding: 12px 16px 16px;
+}
+
+/* 右上角品牌色标签 */
+.gpu-detect__brand {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* 卡片正文：显卡型号 */
+.gpu-detect__name {
+  font-size: 14px;
+  color: var(--color-text-1);
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+/* 同型号数量标记（如：交火双卡 → ×2） */
+.gpu-detect__x {
+  font-weight: 600;
+  color: var(--color-text-2);
 }
 
 .gpu-detect__chip {
@@ -133,33 +170,9 @@ const showAutoTip = computed(
   color: var(--color-text-4);
 }
 
-.gpu-detect__brand {
-  width: 56px;
-  flex-shrink: 0;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.gpu-detect__name {
-  flex: 1;
-  font-size: 13px;
-  color: var(--color-text-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* 同型号数量标记（如：交火双卡 → ×2） */
-.gpu-detect__x {
-  font-weight: 600;
-  color: var(--color-text-1);
-}
-
-/* 推荐 / 自动设置提示 */
+/* 推荐 / 自动设置提示（位于卡片下方） */
 .gpu-detect__tip {
   margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--color-border-2);
   font-size: 12px;
   color: var(--color-text-3);
 }

@@ -40,24 +40,24 @@ function onResetAppearance() {
 
 <template>
   <a-form class="panel__form" layout="horizontal" :model="settings">
-    <!-- 外观 -->
-    <a-card class="panel__card" :bordered="true" size="small">
-      <template #title>外观</template>
-      <template #extra><CardResetButton name="外观" @reset="onResetAppearance" /></template>
-      <a-form-item
-        label="主题外观"
-        extra="选择软件外观：跟随系统深浅色，或手动指定浅色 / 深色，即刻生效"
-      >
-        <a-radio-group :model-value="themeMode" type="button" @change="onThemeModeChange">
-          <a-radio value="follow">跟随系统</a-radio>
-          <a-radio value="light">浅色</a-radio>
-          <a-radio value="dark">深色</a-radio>
-        </a-radio-group>
-      </a-form-item>
-      <a-form-item label="界面语言" extra="当前仅提供简体中文">
-        <a-tag color="gray" :bordered="false">简体中文</a-tag>
-      </a-form-item>
-    </a-card>
+      <!-- 外观 -->
+      <a-card class="panel__card" :bordered="true" size="small">
+        <template #title>外观</template>
+        <template #extra><CardResetButton name="外观" @reset="onResetAppearance" /></template>
+        <a-form-item
+          label="主题外观"
+          extra="选择软件外观：跟随系统深浅色，或手动指定浅色 / 深色，即刻生效"
+        >
+          <a-radio-group :model-value="themeMode" type="button" @change="onThemeModeChange">
+            <a-radio value="follow">跟随系统</a-radio>
+            <a-radio value="light">浅色</a-radio>
+            <a-radio value="dark">深色</a-radio>
+          </a-radio-group>
+        </a-form-item>
+        <a-form-item label="界面语言" extra="当前仅提供简体中文">
+          <a-tag color="gray" :bordered="false">简体中文</a-tag>
+        </a-form-item>
+      </a-card>
   </a-form>
 </template>
 

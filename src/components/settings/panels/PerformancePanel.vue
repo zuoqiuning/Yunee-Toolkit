@@ -15,6 +15,7 @@ import { useSettingsStore, type HwAccel } from '@/stores/settings'
 import { useHardwareStore } from '@/stores/hardware'
 import { useCpuStore } from '@/stores/cpu'
 import { highlight } from '@/utils/notify'
+import { fitNumberInputWidth } from '@/utils/numberWidth'
 import CardResetButton from '../common/CardResetButton.vue'
 import GpuDetectCard from './performance/GpuDetectCard.vue'
 
@@ -66,7 +67,7 @@ const gpuDisabled = computed<Record<HwAccel, boolean>>(() => {
 watch(
   () => [settings.hwAccel, hardware.loaded, hardware.gpus.length] as const,
   () => {
-    if (gpuDisabled.value[settings.hwAccel]) {
+    if (gpuDisabled.value[settings.hwAccel as HwAccel]) {
       const target = hardware.recommended
       settings.hwAccel = target
       Notification.warning({
@@ -190,7 +191,7 @@ function onResetResources() {
           :min="0"
           :max="cpu.maxThreads"
           mode="button"
-          style="width: 320px"
+          :style="{ width: fitNumberInputWidth(settings.threadCount, '核') }"
           @change="onThreadsChange"
         >
           <template #suffix>核</template>
@@ -212,7 +213,7 @@ function onResetResources() {
 
 <style scoped>
 .panel__card + .panel__card {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .panel__card :deep(.arco-card-body) {

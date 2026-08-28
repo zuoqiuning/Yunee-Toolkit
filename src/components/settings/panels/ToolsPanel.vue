@@ -88,7 +88,7 @@ async function onRescan() {
 </script>
 
 <template>
-  <!-- 与其他设置面板一致的卡片框架：标题栏 + 内容区 -->
+  <!-- 与其他设置面板一致的卡片框架：外层包裹卡片 + 内容区 -->
   <a-form class="panel__form" layout="horizontal" :model="{}">
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>内置工具</template>

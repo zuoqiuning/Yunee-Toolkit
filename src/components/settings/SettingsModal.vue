@@ -2,14 +2,15 @@
   设置模态框 SettingsModal
   职责：侧边栏“设置”按钮打开的设置界面（Arco Modal，居中弹窗，尺寸固定）。
   设计说明：
-    - 顶部为 Arco 模态框标准标题栏：左侧“设置”，右侧默认关闭 X。
+    - 外观与「查看协议」模态框同款：顶部左侧标题“设置”，右侧为默认关闭 X；
+      底部操作栏最右侧为「关闭」按钮（左侧为「恢复默认」）。
     - 标题栏下方是选项卡导航（Arco Tabs），切换各设置面板。
-    - 内容区高度固定，内部滚动，不同面板内容多寡都不会改变弹窗尺寸。
+    - 内容区高度固定，仅面板内容区滚动，选项卡保持不动，不同面板内容多寡都不改变弹窗尺寸。
   结构：
     [ 设置                              × ]
-  [ 通用 | 个性化 | 输出 | 性能 | 日志 | 存储 | 工具 ]
+  [ 通用 | 个性化 | 输出 | 性能 | 声音 | 日志 | 存储 | 工具 | 更新 ]
   [           面板内容（固定高度，可滚动）     ]
-  [                 恢复默认                 ]
+  [        恢复默认                   关闭 ]
 -->
 <script setup lang="ts">
 import { ref } from 'vue'
@@ -18,9 +19,11 @@ import GeneralPanel from './panels/GeneralPanel.vue'
 import PersonalizationPanel from './panels/PersonalizationPanel.vue'
 import OutputPanel from './panels/OutputPanel.vue'
 import PerformancePanel from './panels/PerformancePanel.vue'
+import SoundPanel from './panels/SoundPanel.vue'
 import LogPanel from './panels/LogPanel.vue'
 import StoragePanel from './panels/StoragePanel.vue'
 import ToolsPanel from './panels/ToolsPanel.vue'
+import UpdatePanel from './panels/UpdatePanel.vue'
 import { useSettingsStore } from '@/stores/settings'
 
 // 模态框显隐（由父组件控制）
@@ -58,7 +61,6 @@ function onReset() {
     :visible="visible"
     title="设置"
     :width="820"
-    :footer="false"
     :mask-closable="true"
     :align-center="true"
     :esc-to-close="true"
@@ -79,27 +81,32 @@ function onReset() {
         <a-tab-pane key="personalization" title="个性化" />
         <a-tab-pane key="output" title="输出" />
         <a-tab-pane key="performance" title="性能" />
+        <a-tab-pane key="sound" title="声音" />
         <a-tab-pane key="log" title="日志" />
         <a-tab-pane key="storage" title="存储" />
         <a-tab-pane key="tools" title="工具" />
+        <a-tab-pane key="update" title="更新" />
       </a-tabs>
 
-      <!-- 面板容器（滚动） -->
+      <!-- 面板容器（仅此处滚动，选项卡保持固定） -->
       <div class="modal__scroll">
         <GeneralPanel v-if="activeTab === 'general'" />
         <PersonalizationPanel v-else-if="activeTab === 'personalization'" />
         <OutputPanel v-else-if="activeTab === 'output'" />
         <PerformancePanel v-else-if="activeTab === 'performance'" />
+        <SoundPanel v-else-if="activeTab === 'sound'" />
         <LogPanel v-else-if="activeTab === 'log'" />
         <StoragePanel v-else-if="activeTab === 'storage'" />
         <ToolsPanel v-else-if="activeTab === 'tools'" />
+        <UpdatePanel v-else-if="activeTab === 'update'" />
       </div>
     </div>
 
-    <!-- 底部：恢复默认 -->
+    <!-- 底部操作栏：左侧恢复默认，右侧关闭（与「查看协议」模态框同款布局） -->
     <template #footer>
       <div class="modal__footer">
         <a-button type="secondary" @click="onReset">恢复默认</a-button>
+        <a-button type="primary" @click="close">关闭</a-button>
       </div>
     </template>
   </a-modal>
@@ -123,7 +130,7 @@ function onReset() {
   display: none;
 }
 
-/* 面板容器：占满剩余高度，可滚动 */
+/* 面板容器：占满剩余高度；滚动条放这里，仅面板内容滚动，选项卡保持不动 */
 .modal__scroll {
   flex: 1;
   min-height: 0;
@@ -131,9 +138,10 @@ function onReset() {
   padding: 12px 16px 8px;
 }
 
-/* 底部右侧 */
+/* 底部操作栏：恢复默认在左，关闭在右（与「查看协议」模态框底部对齐一致） */
 .modal__footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 8px;
 }
 </style>

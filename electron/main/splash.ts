@@ -8,7 +8,7 @@
  *   - 页面为纯内联 HTML/CSS/JS 静态文件（resources/splash/index.html），
  *     复用同一份 preload，仅通过白名单事件通道接收主进程推送的进度。
  */
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, nativeTheme } from 'electron'
 import path from 'node:path'
 import type { StartupTaskStatus } from './startup'
 import { info as logInfo } from './logger'
@@ -21,6 +21,8 @@ let splashWindow: BrowserWindow | null = null
  * loadFile 加载本地静态页；ready-to-show 后再显示，避免白屏闪烁。
  */
 export function createSplashWindow(): BrowserWindow {
+  // 系统是否为深色模式：用于设置加载窗口背景色（避免加载页渲染前闪烁白屏）
+  const isDark = nativeTheme.shouldUseDarkColors
   splashWindow = new BrowserWindow({
     width: 440,
     height: 350,
@@ -32,6 +34,8 @@ export function createSplashWindow(): BrowserWindow {
     show: false,
     skipTaskbar: true,
     alwaysOnTop: true,
+    // 深色系统下用深色底，浅色系统用白色底：窗口在页面渲染前即呈现正确底色
+    backgroundColor: isDark ? '#17171a' : '#ffffff',
     // 与主窗口同方案：不透明纯直角窗口（禁用系统圆角）
     roundedCorners: false,
     title: 'Yunee Toolkit',
@@ -44,8 +48,11 @@ export function createSplashWindow(): BrowserWindow {
     },
   })
 
-  // 加载本地加载页（开发与打包后资源均位于 resources 目录）
-  splashWindow.loadFile(path.join(__dirname, '../../resources/splash/index.html'))
+  // 加载本地加载页（开发与打包后资源均位于 resources 目录）；
+  // 以查询参数把系统深浅色同步给页面，使首帧即为正确主题（避免深色系统下先白后黑的闪烁）
+  splashWindow.loadFile(path.join(__dirname, '../../resources/splash/index.html'), {
+    query: { dark: isDark ? '1' : '0' },
+  })
 
   splashWindow.once('ready-to-show', () => {
     splashWindow?.show()

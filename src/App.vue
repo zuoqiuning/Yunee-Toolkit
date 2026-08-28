@@ -13,18 +13,45 @@ import { useSettingsStore } from '@/stores/settings'
 import { useHardwareStore } from '@/stores/hardware'
 import { useTasksStore } from '@/stores/tasks'
 import { highlight } from '@/utils/notify'
-import { playCompleteSound, playErrorSound } from '@/utils/sounds'
+import { CLICK_SOUNDS, COMPLETE_SOUNDS, ERROR_SOUNDS, playSoundById } from '@/utils/sounds'
 
 const settings = useSettingsStore()
 const appStore = useAppStore()
 const hardware = useHardwareStore()
 const tasksStore = useTasksStore()
 
-// 系统深浅色偏好（用于「跟随系统主题」）
-const systemDark = ref(false)
+// 系统深浅色偏好（用于「跟随系统主题」）。
+// 初值用同步 CSS 媒体查询直接读取，确保 Vue 首次渲染即为正确主题，
+// 避免深色系统下先以浅色渲染导致的白屏闪烁；随后再由主进程权威结果校准。
+const systemDark = ref(window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false)
 let mediaQuery: MediaQueryList | null = null
+/** matchMedia 兜底回调（仅纯浏览器预览环境使用） */
 const onSystemSchemeChange = (e: MediaQueryListEvent) => {
   systemDark.value = e.matches
+}
+/** 主进程 nativeTheme 变化推送的取消订阅函数 */
+let disposeThemeListener: (() => void) | null = null
+
+/**
+ * 初始化系统深浅色检测：
+ *  - Electron 环境：优先走主进程 nativeTheme（shouldUseDarkColors），
+ *    系统配色是操作系统级可靠检测；系统设置变化由主进程主动推送。
+ *  - 纯浏览器预览（无 Electron）：回退渲染层 matchMedia 检测。
+ */
+async function initSystemTheme() {
+  const api = window.yuneeAPI
+  if (api?.getSystemDark) {
+    // 初始值以主进程检测结果为准，避免 matchMedia 偶尔返回滞后值导致配色错误
+    systemDark.value = await api.getSystemDark().catch(() => systemDark.value)
+    disposeThemeListener = api.onMainEvent('theme:system-changed', (payload) => {
+      systemDark.value = payload === true
+    })
+    return
+  }
+  if (window.matchMedia) {
+    mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    mediaQuery.addEventListener('change', onSystemSchemeChange)
+  }
 }
 
 // 实际生效主题：开启「跟随系统」时取系统偏好，否则取手动设置值
@@ -42,6 +69,35 @@ let disposeCompleteListener: (() => void) | null | undefined = null
 let disposeErrorListener: (() => void) | null | undefined = null
 // 自动更新事件监听：由 subscribeUpdater 收集，卸载时统一取消
 let disposeUpdaterListeners: (() => void)[] = []
+
+/** 点击音效命中的可交互控件选择器（按钮 / 开关 / 单选 / 页签 / 菜单等） */
+const CLICK_SOUND_SELECTOR = [
+  'button',
+  '.arco-btn',
+  '.arco-switch',
+  '.arco-radio',
+  '.arco-checkbox',
+  '.arco-tabs-tab',
+  '.arco-menu-item',
+  '.arco-select-view',
+  '.arco-collapse-item-header',
+  '.arco-dropdown-menu-item',
+  '.arco-link',
+].join(', ')
+
+/**
+ * 全局按钮点击音效：
+ * 开启「点击音效」时，点击上述可交互控件即播放短促点击音。
+ * 采用 document 事件委托 + closest 匹配，一次点击只触发一声，性能与覆盖兼顾。
+ */
+function onDocumentClick(e: MouseEvent) {
+  if (!settings.playClickSound) return
+  const target = e.target
+  if (!(target instanceof Element)) return
+  if (target.closest(CLICK_SOUND_SELECTOR)) {
+    playSoundById(settings.clickSound, CLICK_SOUNDS[0].id)
+  }
+}
 
 /**
  * 订阅自动更新事件：根据「手动/自动」标记与事件阶段展示通知。
@@ -163,19 +219,17 @@ onMounted(async () => {
   // 转换任务：拉取现有任务并全局订阅进度/结果事件（任务在任意页面都持续更新）
   await tasksStore.refresh()
   tasksStore.subscribe()
-  // 订阅系统深浅色偏好（跟随系统主题的基础）
-  if (window.matchMedia) {
-    mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    systemDark.value = mediaQuery.matches
-    mediaQuery.addEventListener('change', onSystemSchemeChange)
-  }
+  // 订阅系统深浅色偏好（跟随系统主题的基础；Electron 走主进程 nativeTheme，浏览器回退 matchMedia）
+  await initSystemTheme()
   // 转换完成 / 失败：按设置播放提示音（任务队列引擎推送时触发）
   disposeCompleteListener = window.yuneeAPI?.onMainEvent('conversion-complete', () => {
-    if (settings.playSoundOnComplete) playCompleteSound()
+    if (settings.playSoundOnComplete) playSoundById(settings.soundComplete, COMPLETE_SOUNDS[0].id)
   })
   disposeErrorListener = window.yuneeAPI?.onMainEvent('conversion-error', () => {
-    if (settings.playSoundOnError) playErrorSound()
+    if (settings.playSoundOnError) playSoundById(settings.soundError, ERROR_SOUNDS[0].id)
   })
+  // 全局按钮点击音效（事件委托，点击各类控件时按设置播放短促点击音）
+  document.addEventListener('click', onDocumentClick)
   // 主界面就绪留痕：渲染进程已完成挂载，可开始交互
   window.yuneeAPI?.logEvent('ui', '界面就绪', '渲染进程挂载完成，进入主界面')
 })
@@ -184,9 +238,11 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   disposeCompleteListener?.()
   disposeErrorListener?.()
+  disposeThemeListener?.()
   disposeUpdaterListeners.forEach((off) => off())
   disposeUpdaterListeners = []
   mediaQuery?.removeEventListener('change', onSystemSchemeChange)
+  document.removeEventListener('click', onDocumentClick)
   tasksStore.unsubscribe()
 })
 </script>

@@ -1,10 +1,10 @@
 <!--
   设置面板：通用（系统层）
-  职责：开机自启、启动时检查更新、关闭窗口行为等系统级设置。
+  职责：开机自启、关闭窗口行为等系统级设置。
   设计：使用 Arco Form（label 在左）+ Card 分组。
   - 开机自启通过主进程写入/读取系统登录项，结果以 Notification 反馈。
   - 关闭窗口行为（退出 / 最小化到托盘）同步到主进程托盘与窗口关闭逻辑。
-  - 主题等外观相关项已迁移到“个性化”面板。
+  - 更新相关（版本、检查更新）已迁移到“更新”面板；主题等外观项在“个性化”面板。
 -->
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
@@ -68,36 +68,9 @@ function onCloseBehaviorChange(value: unknown) {
   })
 }
 
-/** 启动时检查更新变更反馈 */
-function onCheckUpdateChange(value: string | number | boolean) {
-  Notification.success({
-    content: highlight(value ? '已「开启」启动时检查更新。' : '已「关闭」启动时检查更新。'),
-  })
-}
-
-/** 检查更新按钮的加载态（点击后置灰，直到本次检查结束） */
-const checkingUpdate = ref(false)
-
-/**
- * 手动触发一次更新检查（manual=true，无更新/出错时主进程会推送提示）。
- * 结果通知由 App.vue 订阅的 update:* 事件统一展示，这里只管理按钮加载态。
- */
-async function onCheckUpdateNow() {
-  if (checkingUpdate.value) return
-  checkingUpdate.value = true
-  try {
-    await window.yuneeAPI?.checkForUpdates(true)
-  } finally {
-    // IPC 触发即返回；为避免按钮短暂闪烁，延时复位加载态
-    setTimeout(() => {
-      checkingUpdate.value = false
-    }, 1200)
-  }
-}
-
 /** 复位“启动”设置（开机自启同步回本地 ref；其余由 store watch 自动持久化与同步） */
 function onResetStartup() {
-  settings.resetFields(['autoStart', 'checkUpdateOnStart'])
+  settings.resetFields(['autoStart'])
   autoStartVal.value = settings.autoStart
 }
 
@@ -109,21 +82,12 @@ function onResetCloseWindow() {
 
 <template>
   <a-form class="panel__form" layout="horizontal" :model="settings">
-    <!-- 启动 -->
-    <a-card class="panel__card" :bordered="true" size="small">
+      <!-- 启动 -->
+      <a-card class="panel__card" :bordered="true" size="small">
       <template #title>启动</template>
       <template #extra><CardResetButton name="启动" @reset="onResetStartup" /></template>
       <a-form-item label="开机自启" extra="随系统登录自动启动软件（仅 Windows）">
         <a-switch v-model="autoStartVal" @change="onAutoStartChange" />
-      </a-form-item>
-      <a-form-item label="启动时检查更新" extra="软件启动时自动检查是否有新版本可用">
-        <a-switch v-model="settings.checkUpdateOnStart" @change="onCheckUpdateChange" />
-      </a-form-item>
-      <a-form-item label="立即检查更新">
-        <a-button :loading="checkingUpdate" @click="onCheckUpdateNow">检查更新</a-button>
-        <a-typography-text class="gen-hint" type="secondary">
-          检查结果将在右下角通知中展示；发现新版本后会在后台下载
-        </a-typography-text>
       </a-form-item>
     </a-card>
 
@@ -144,7 +108,7 @@ function onResetCloseWindow() {
           <a-radio value="tray">最小化到托盘</a-radio>
         </a-radio-group>
       </a-form-item>
-    </a-card>
+      </a-card>
   </a-form>
 </template>
 
@@ -154,16 +118,10 @@ function onResetCloseWindow() {
 }
 
 .panel__card + .panel__card {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .panel__card :deep(.arco-card-body) {
   padding: 8px 8px 0;
-}
-
-/* 检查更新按钮下方的补充说明 */
-.gen-hint {
-  margin-left: 12px;
-  font-size: 12px;
 }
 </style>

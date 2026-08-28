@@ -13,6 +13,7 @@ import { ref } from 'vue'
 import { Notification } from '@arco-design/web-vue'
 import { useSettingsStore } from '@/stores/settings'
 import { highlight } from '@/utils/notify'
+import { fitNumberInputWidth } from '@/utils/numberWidth'
 import CardResetButton from '../common/CardResetButton.vue'
 
 const settings = useSettingsStore()
@@ -206,7 +207,7 @@ function onResetClean() {
           :min="1"
           :max="365"
           mode="button"
-          :style="{ width: '320px' }"
+          :style="{ width: fitNumberInputWidth(settings.logRetainDays) }"
           @change="onRetainChange"
         />
         <span class="log-clean__unit">天</span>
@@ -217,7 +218,7 @@ function onResetClean() {
           :min="10"
           :max="1000"
           mode="button"
-          :style="{ width: '320px' }"
+          :style="{ width: fitNumberInputWidth(settings.logMaxFiles) }"
           @change="onMaxFilesChange"
         />
         <span class="log-clean__unit">个</span>
@@ -234,7 +235,7 @@ function onResetClean() {
 
 <style scoped>
 .panel__card + .panel__card {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .panel__card :deep(.arco-card-body) {

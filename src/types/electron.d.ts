@@ -79,6 +79,8 @@ interface LogConfig {
 interface YuneeApi {
   /** 获取应用版本信息 */
   getAppVersion: () => Promise<string>
+  /** 查询当前系统是否为深色模式（基于主进程 nativeTheme，比渲染层 matchMedia 更可靠） */
+  getSystemDark: () => Promise<boolean>
   /** 获取 FFmpeg 三个可执行文件所在的目录 */
   getFfmpegBinPath: () => Promise<string>
   /** 自绘标题栏的窗口控制 */

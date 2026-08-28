@@ -108,6 +108,8 @@ export interface LogConfig {
 export interface YuneeApi {
   /** 获取应用版本信息 */
   getAppVersion: () => Promise<string>
+  /** 查询当前系统是否为深色模式（基于主进程 nativeTheme，比渲染层 matchMedia 更可靠） */
+  getSystemDark: () => Promise<boolean>
   /** 获取 FFmpeg 三个可执行文件所在的目录 */
   getFfmpegBinPath: () => Promise<string>
   /** 自绘标题栏的窗口控制 */
@@ -200,6 +202,7 @@ const MAIN_EVENT_CHANNELS = new Set([
   'window:maximized-changed', // 窗口最大化状态变化
   'splash:task',         // 启动加载窗口：预加载任务状态
   'open-settings',       // 托盘菜单：请求打开「设置」模态框
+  'theme:system-changed',// 系统主题：系统深浅色变化推送（跟随系统主题实时生效）
   'update:checking',     // 自动更新：开始检查
   'update:available',    // 自动更新：发现新版本
   'update:not-available',// 自动更新：已是最新版本
@@ -211,6 +214,7 @@ const MAIN_EVENT_CHANNELS = new Set([
 // 通过 contextBridge 暴露安全 API
 const api: YuneeApi = {
   getAppVersion: () => ipcRenderer.invoke('app:get-version'),
+  getSystemDark: () => ipcRenderer.invoke('theme:get-system-dark'),
   getFfmpegBinPath: () => ipcRenderer.invoke('ffmpeg:get-bin-path'),
   getTools: (force) => ipcRenderer.invoke('tools:get', force),
   selectDirectory: () => ipcRenderer.invoke('dialog:select-directory'),

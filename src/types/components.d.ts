@@ -11,6 +11,8 @@ declare module 'vue' {
     AboutPanel: typeof import('./../components/settings/panels/AboutPanel.vue')['default']
     AButton: typeof import('@arco-design/web-vue')['Button']
     ACard: typeof import('@arco-design/web-vue')['Card']
+    ACheckbox: typeof import('@arco-design/web-vue')['Checkbox']
+    ACheckboxGroup: typeof import('@arco-design/web-vue')['CheckboxGroup']
     ACollapse: typeof import('@arco-design/web-vue')['Collapse']
     ACollapseItem: typeof import('@arco-design/web-vue')['CollapseItem']
     ADivider: typeof import('@arco-design/web-vue')['Divider']
@@ -57,10 +59,12 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SettingsModal: typeof import('./../components/settings/SettingsModal.vue')['default']
+    SoundPanel: typeof import('./../components/settings/panels/SoundPanel.vue')['default']
     StoragePanel: typeof import('./../components/settings/panels/StoragePanel.vue')['default']
     TitleBar: typeof import('./../components/common/TitleBar.vue')['default']
     ToolIcon: typeof import('./../components/common/ToolIcon.vue')['default']
     ToolsPanel: typeof import('./../components/settings/panels/ToolsPanel.vue')['default']
     UnderDevelopmentView: typeof import('./../components/common/UnderDevelopmentView.vue')['default']
+    UpdatePanel: typeof import('./../components/settings/panels/UpdatePanel.vue')['default']
   }
 }

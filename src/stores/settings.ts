@@ -49,6 +49,10 @@ const FIELD_NAMES = [
   'fileNamePreset',
   'playSoundOnComplete',
   'playSoundOnError',
+  'soundComplete',
+  'soundError',
+  'playClickSound',
+  'clickSound',
 ] as const
 
 /** 本地持久化键名 */
@@ -143,6 +147,14 @@ interface SettingsState {
   playSoundOnComplete: boolean
   /** 转换失败时播放提示音 */
   playSoundOnError: boolean
+  /** 转换完成提示音（声音库 id，见 utils/sounds.ts COMPLETE_SOUNDS） */
+  soundComplete: string
+  /** 转换失败提示音（声音库 id，见 utils/sounds.ts ERROR_SOUNDS） */
+  soundError: string
+  /** 点击按钮时播放提示音 */
+  playClickSound: boolean
+  /** 按钮点击提示音（声音库 id，见 utils/sounds.ts CLICK_SOUNDS） */
+  clickSound: string
 }
 
 /** 默认设置 */
@@ -169,6 +181,10 @@ const DEFAULTS: SettingsState = {
   fileNamePreset: 'keep',
   playSoundOnComplete: true,
   playSoundOnError: true,
+  soundComplete: 'chime',
+  soundError: 'fall',
+  playClickSound: true,
+  clickSound: 'tick',
 }
 
 /** 从 localStorage 安全读取设置，失败或缺失时回退默认值 */
@@ -213,6 +229,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const fileNamePreset = ref<FileNamePreset>(state.fileNamePreset)
   const playSoundOnComplete = ref(state.playSoundOnComplete)
   const playSoundOnError = ref(state.playSoundOnError)
+  const soundComplete = ref(state.soundComplete)
+  const soundError = ref(state.soundError)
+  const playClickSound = ref(state.playClickSound)
+  const clickSound = ref(state.clickSound)
 
   // 字段名 -> 响应式 ref 映射，供按面板/按卡片定点恢复默认值
   const fieldRefs: Record<keyof SettingsState, { value: unknown }> = {
@@ -238,6 +258,10 @@ export const useSettingsStore = defineStore('settings', () => {
     fileNamePreset,
     playSoundOnComplete,
     playSoundOnError,
+    soundComplete,
+    soundError,
+    playClickSound,
+    clickSound,
   }
 
   // 任何字段变化时立即写入 localStorage（读取各 ref 当前值，序列化后保存）
@@ -265,6 +289,10 @@ export const useSettingsStore = defineStore('settings', () => {
       fileNamePreset,
       playSoundOnComplete,
       playSoundOnError,
+      soundComplete,
+      soundError,
+      playClickSound,
+      clickSound,
     ],
     () => {
       try {
@@ -293,6 +321,10 @@ export const useSettingsStore = defineStore('settings', () => {
             fileNamePreset: fileNamePreset.value,
             playSoundOnComplete: playSoundOnComplete.value,
             playSoundOnError: playSoundOnError.value,
+            soundComplete: soundComplete.value,
+            soundError: soundError.value,
+            playClickSound: playClickSound.value,
+            clickSound: clickSound.value,
           }),
         )
       } catch {
@@ -327,6 +359,10 @@ export const useSettingsStore = defineStore('settings', () => {
       fileNamePreset,
       playSoundOnComplete,
       playSoundOnError,
+      soundComplete,
+      soundError,
+      playClickSound,
+      clickSound,
     ],
     (newVals: unknown[], oldVals: unknown[]) => {
       const parts: string[] = []
@@ -376,6 +412,10 @@ export const useSettingsStore = defineStore('settings', () => {
     fileNamePreset.value = DEFAULTS.fileNamePreset
     playSoundOnComplete.value = DEFAULTS.playSoundOnComplete
     playSoundOnError.value = DEFAULTS.playSoundOnError
+    soundComplete.value = DEFAULTS.soundComplete
+    soundError.value = DEFAULTS.soundError
+    playClickSound.value = DEFAULTS.playClickSound
+    clickSound.value = DEFAULTS.clickSound
   }
 
   /** 仅将指定的若干字段恢复为默认值（用于各设置卡片表头的“恢复默认”） */
@@ -436,6 +476,10 @@ export const useSettingsStore = defineStore('settings', () => {
     fileNamePreset,
     playSoundOnComplete,
     playSoundOnError,
+    soundComplete,
+    soundError,
+    playClickSound,
+    clickSound,
     reset,
     resetFields,
     applyDefaultDirs,

@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useHardwareStore } from '@/stores/hardware'
+import { fitNumberInputWidth } from '@/utils/numberWidth'
 import type { VideoParams } from './types'
 
 /** 参数对象（由父级持有，直接改写属性即可双向同步） */
@@ -125,7 +126,7 @@ const hwExtra = computed(() => {
               :max="7680"
               placeholder="宽"
               mode="button"
-              style="width: 150px"
+              :style="{ width: fitNumberInputWidth(params.customWidth) }"
             />
             <span class="vparam__x">×</span>
             <a-input-number
@@ -134,7 +135,7 @@ const hwExtra = computed(() => {
               :max="4320"
               placeholder="高"
               mode="button"
-              style="width: 150px"
+              :style="{ width: fitNumberInputWidth(params.customHeight) }"
             />
           </template>
         </a-space>
@@ -155,7 +156,7 @@ const hwExtra = computed(() => {
             :max="240"
             placeholder="帧率"
             mode="button"
-            style="width: 150px"
+            :style="{ width: fitNumberInputWidth(params.customFps) }"
           />
         </a-space>
       </a-form-item>

@@ -8,7 +8,7 @@
  * 注意：CPU 密集型任务（如 FFmpeg 转码）一律放在主进程通过子进程调用，
  *       不阻塞 UI 线程。
  */
-import { app, BrowserWindow, screen } from 'electron'
+import { app, BrowserWindow, screen, nativeTheme } from 'electron'
 import path from 'node:path'
 import { registerIpcHandlers } from '../ipc'
 import { getDefaultLogDir } from '../ipc/settings'
@@ -66,6 +66,9 @@ function createMainWindow(): void {
     // 不透明窗口：外观由系统绘制，渲染层直接铺满，天然单层无套壳
     // 先隐藏，待页面渲染完成（ready-to-show）再显示，避免白屏闪烁
     show: false,
+    // 窗口底色跟随系统深浅色：页面首帧渲染前即呈现正确底色，
+    // 与渲染层同步设置主题配合，彻底消除深色系统下“先白后黑”的闪烁
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1e1f22' : '#f4f6f9',
     // —— 自绘窗口标题栏相关 ——
     frame: false,          // 无边框：由渲染进程 TitleBar 接管标题栏
     roundedCorners: false, // 禁用系统窗口圆角（Electron 支持 Windows）：纯直角外观，风格简洁统一

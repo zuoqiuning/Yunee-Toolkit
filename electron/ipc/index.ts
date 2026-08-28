@@ -11,6 +11,7 @@ import { registerHardwareIpc } from './hardware'
 import { registerCpuIpc } from './cpu'
 import { registerToolsIpc } from './tools'
 import { registerLoggerIpc } from './logger'
+import { registerThemeIpc } from './theme'
 import { registerLicenseIpc } from './license'
 import { registerConversionIpc } from './conversion'
 import { registerUpdaterIpc } from './updater'
@@ -36,6 +37,9 @@ export function registerIpcHandlers(): void {
 
   // 日志相关：目录切换 / 用户操作上报 / 手动清理
   registerLoggerIpc()
+
+  // 系统主题相关：系统深浅色查询 / 变化推送（跟随系统主题的基础）
+  registerThemeIpc()
 
   // 开源协议相关：协议文本读取（“关于”界面查看协议弹窗）
   registerLicenseIpc()
