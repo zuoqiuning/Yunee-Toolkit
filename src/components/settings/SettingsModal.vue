@@ -4,12 +4,14 @@
   设计说明：
     - 外观与「查看协议」模态框同款：顶部左侧标题“设置”，右侧为默认关闭 X；
       底部操作栏最右侧为「关闭」按钮（左侧为「恢复默认」）。
-    - 标题栏下方是选项卡导航（Arco Tabs），切换各设置面板。
-    - 内容区高度固定，仅面板内容区滚动，选项卡保持不动，不同面板内容多寡都不改变弹窗尺寸。
+    - 标题栏下方是选项卡导航（Arco Tabs，type=card-gutter）。
+    - 选项卡整体作为「外框架」自动填满内容区（600px 高）：页签栏固定顶部，
+      面板内容置于各 tab-pane 内，仅在框架内容区内部滚动，页签与弹窗尺寸保持不动。
+    - 页签容器使用浅灰衬底（fill-2），无底部横线，直角风格。
   结构：
     [ 设置                              × ]
-  [ 通用 | 个性化 | 输出 | 性能 | 声音 | 日志 | 存储 | 工具 | 更新 ]
-  [           面板内容（固定高度，可滚动）     ]
+  [ 通用 | 个性化 | 输出 | 性能 | 声音 | 日志 | 存储 | 工具 | 更新 ]  ← 页签固定
+  [           面板内容（框架内可滚动）            ]
   [        恢复默认                   关闭 ]
 -->
 <script setup lang="ts">
@@ -68,38 +70,42 @@ function onReset() {
     @cancel="close"
     @close="close"
   >
-    <!-- 固定高度的内容区：选项卡在上，面板在占满剩余空间并可滚动 -->
+    <!-- 固定高度的内容区：选项卡外框架填满，页签固定、面板内容在框架内滚动 -->
     <div class="modal__body">
-      <!-- 选项卡导航 -->
       <a-tabs
         v-model:active-key="activeTab"
         type="card-gutter"
         class="modal__tabs"
         :destroy-on-hide="false"
       >
-        <a-tab-pane key="general" title="通用" />
-        <a-tab-pane key="personalization" title="个性化" />
-        <a-tab-pane key="output" title="输出" />
-        <a-tab-pane key="performance" title="性能" />
-        <a-tab-pane key="sound" title="声音" />
-        <a-tab-pane key="log" title="日志" />
-        <a-tab-pane key="storage" title="存储" />
-        <a-tab-pane key="tools" title="工具" />
-        <a-tab-pane key="update" title="更新" />
+        <a-tab-pane key="general" title="通用" lazy-load>
+          <GeneralPanel />
+        </a-tab-pane>
+        <a-tab-pane key="personalization" title="个性化" lazy-load>
+          <PersonalizationPanel />
+        </a-tab-pane>
+        <a-tab-pane key="output" title="输出" lazy-load>
+          <OutputPanel />
+        </a-tab-pane>
+        <a-tab-pane key="performance" title="性能" lazy-load>
+          <PerformancePanel />
+        </a-tab-pane>
+        <a-tab-pane key="sound" title="声音" lazy-load>
+          <SoundPanel />
+        </a-tab-pane>
+        <a-tab-pane key="log" title="日志" lazy-load>
+          <LogPanel />
+        </a-tab-pane>
+        <a-tab-pane key="storage" title="存储" lazy-load>
+          <StoragePanel />
+        </a-tab-pane>
+        <a-tab-pane key="tools" title="工具" lazy-load>
+          <ToolsPanel />
+        </a-tab-pane>
+        <a-tab-pane key="update" title="更新" lazy-load>
+          <UpdatePanel />
+        </a-tab-pane>
       </a-tabs>
-
-      <!-- 面板容器（仅此处滚动，选项卡保持固定） -->
-      <div class="modal__scroll">
-        <GeneralPanel v-if="activeTab === 'general'" />
-        <PersonalizationPanel v-else-if="activeTab === 'personalization'" />
-        <OutputPanel v-else-if="activeTab === 'output'" />
-        <PerformancePanel v-else-if="activeTab === 'performance'" />
-        <SoundPanel v-else-if="activeTab === 'sound'" />
-        <LogPanel v-else-if="activeTab === 'log'" />
-        <StoragePanel v-else-if="activeTab === 'storage'" />
-        <ToolsPanel v-else-if="activeTab === 'tools'" />
-        <UpdatePanel v-else-if="activeTab === 'update'" />
-      </div>
     </div>
 
     <!-- 底部操作栏：左侧恢复默认，右侧关闭（与「查看协议」模态框同款布局） -->
@@ -113,22 +119,29 @@ function onReset() {
 </template>
 
 <style scoped>
-/* 固定高度内容区：flex 纵向，选项卡 + 面板 */
+/* 固定高度内容区（600px），由选项卡外框架整体填满 */
 .modal__body {
-  display: flex;
-  flex-direction: column;
   height: 600px;
 }
 
-/* 选项卡固定在上部 */
+/* 选项卡作为整体包裹框架：填满内容区，纵向布局（页签在上、内容在下） */
 .modal__tabs {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 页签栏：固定顶部，不随内容滚动；顶部留白作为外框架边缘 */
+.modal__tabs :deep(.arco-tabs-header) {
   flex-shrink: 0;
   padding: 12px 16px 0;
 }
 
-/* 卡片式页签容器：浅灰衬底，贴合项目纯直角风格 */
+/* 页签容器（外框架衬底）：浅灰背景、直角，移除页签下方横线 */
 .modal__tabs :deep(.arco-tabs-header-nav) {
   background-color: var(--color-fill-2);
+  border-bottom: none;
+  box-shadow: none;
   border-radius: 0;
 }
 
@@ -137,16 +150,13 @@ function onReset() {
   border-radius: 0;
 }
 
+/* 内容区：占满剩余高度，与外框架同色衬底，仅面板内容在内部滚动 */
 .modal__tabs :deep(.arco-tabs-content) {
-  display: none;
-}
-
-/* 面板容器：占满剩余高度；滚动条放这里，仅面板内容滚动，选项卡保持不动 */
-.modal__scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 12px 16px 8px;
+  background-color: var(--color-fill-2);
 }
 
 /* 底部操作栏：恢复默认在左，关闭在右（与「查看协议」模态框底部对齐一致） */
