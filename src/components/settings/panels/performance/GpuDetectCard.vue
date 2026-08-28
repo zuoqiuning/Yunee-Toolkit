@@ -75,9 +75,9 @@ const showAutoTip = computed(
       <!-- 显卡信息表格（网格线 + 醒目表头） -->
       <a-table
         class="gpu-detect__table"
-        :data="hardware.gpus"
+        :data="gpuRows"
         :columns="gpuColumns"
-        :row-key="gpuRowKey"
+        row-key="_key"
         :pagination="false"
         :bordered="{ wrapper: true, cell: true }"
         size="small"
