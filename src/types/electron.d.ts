@@ -139,6 +139,8 @@ interface YuneeApi {
   getLicenseText: (key: string) => Promise<string | null>
   /** 弹出文件选择对话框（可按过滤器限定类型），取消返回 null */
   selectFile: (filters?: { name: string; extensions: string[] }[]) => Promise<string | null>
+  /** 获取拖拽 File 对象的真实文件系统路径（Electron 官方安全 API，替代已移除的 File.path） */
+  getPathForFile: (file: File) => string
   /** 转换任务：入队一个新任务，返回创建的任务（含 id/初始状态）；校验失败返回 null */
   startConversion: (payload: {
     kind: 'video' | 'audio' | 'image' | 'container'
@@ -241,6 +243,7 @@ declare global {
     audioBitrate?: string
     hwaccel?: 'none' | 'nvidia' | 'intel' | 'amd'
     threads?: number
+    deleteSource?: boolean
   }
 
   // 转换任务：进度

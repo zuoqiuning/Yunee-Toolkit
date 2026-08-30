@@ -192,5 +192,7 @@ function sanitizeOptions(raw: unknown): ConversionOptions {
   if (hw) out.hwaccel = hw
   const threads = Number(o.threads)
   if (Number.isFinite(threads) && threads > 0) out.threads = Math.trunc(threads)
+  // 删除源文件开关：仅接受布尔值，防止脏数据触发误删
+  if (o.deleteSource === true) out.deleteSource = true
   return out
 }

@@ -38,11 +38,19 @@ export const useTasksStore = defineStore('tasks', () => {
     const api = window.yuneeAPI
     if (!api) return
 
-    // 进度：增量更新对应任务的 progress 字段
+    // 进度：增量更新对应任务的 progress 字段；事件附带的 status 用于
+    // 把「排队中」实时刷新为「转换中」（主进程队列运行后首次进度即带 running）
     const offProgress = api.onMainEvent('conversion-progress', (payload) => {
-      const { id, progress } = payload as { id: string; progress: TaskProgress }
+      const { id, progress, status } = payload as {
+        id: string
+        progress: TaskProgress
+        status?: TaskStatus
+      }
       const t = tasks.value.find((x) => x.id === id)
-      if (t) t.progress = progress
+      if (t) {
+        t.progress = progress
+        if (status) t.status = status
+      }
     })
 
     // 完成：标记 completed 并置满进度

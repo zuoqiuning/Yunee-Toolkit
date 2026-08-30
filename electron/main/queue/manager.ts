@@ -165,7 +165,9 @@ class TaskQueue {
           if (Date.now() - lastProgress < PROGRESS_THROTTLE_MS && p.percent < 100) return
           lastProgress = Date.now()
           task.progress = p
-          this.send('conversion-progress', { id, progress: p })
+          // 事件附带当前任务状态：渲染进程据此把「排队中」实时刷新为「转换中」，
+          // 避免任务开始运行后界面状态标签仍停留在「排队中」。
+          this.send('conversion-progress', { id, progress: p, status: task.status })
         },
       })
 
@@ -179,9 +181,21 @@ class TaskQueue {
       }
       if (result.code === 0) {
         task.progress = { ...task.progress, percent: 100 }
+        // 不保留源文件：转换成功后删除输入文件
+        // 安全：仅当「请求删除」且输入输出不是同一文件时才执行，删除失败只记日志不阻断完成。
+        let deletedSource = false
+        if (task.options.deleteSource && !isSamePath(task.input, task.output)) {
+          try {
+            await fs.promises.rm(task.input, { force: true })
+            deletedSource = true
+            logInfo('queue', `源文件已删除：${pathBase(task.input)}`)
+          } catch (err) {
+            logWarn('queue', `源文件删除失败：${pathBase(task.input)} · ${String(err)}`)
+          }
+        }
         this.setStatus(task, 'completed')
         task.finishedAt = Date.now()
-        this.send('conversion-complete', { id })
+        this.send('conversion-complete', { id, deletedSource })
         logInfo('queue', `任务完成：${pathBase(task.output)}`)
       } else {
         this.cleanupOutput(task.output)
@@ -232,6 +246,15 @@ class TaskQueue {
 function pathBase(p: string): string {
   const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'))
   return i >= 0 ? p.slice(i + 1) : p
+}
+
+/**
+ * 判断两个路径是否为同一文件（Windows 语义：忽略大小写与分隔符差异）。
+ * 用于「删除源文件」前的安全校验，防止输入输出同路径时误删。
+ */
+function isSamePath(a: string, b: string): boolean {
+  const norm = (p: string) => p.replace(/[\\/]+/g, '/').replace(/\/+$/g, '').toLowerCase()
+  return norm(a) === norm(b)
 }
 
 /** 事件广播到所有窗口的默认发送实现 */

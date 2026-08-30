@@ -104,8 +104,25 @@ async function start() {
     finalPath = action === 'rename' ? resolved.uniquePath : resolved.path
   }
 
-  // 页面参数 → 主进程转换参数（线程数取自设置）
+  // 已关闭「保留源文件」：转换完成后会删除源文件（不可逆操作，需用户明确确认后再继续）
+  if (!settings.keepSource) {
+    const proceed = await new Promise<boolean>((resolve) => {
+      Modal.confirm({
+        title: '删除源文件',
+        content: '已开启「不保留源文件」，转换成功后源文件将被永久删除，确定继续吗？',
+        okText: '确定删除',
+        cancelText: '保留源文件',
+        onOk: () => resolve(true),
+        onCancel: () => resolve(false),
+        onClose: () => resolve(false),
+      })
+    })
+    if (!proceed) return
+  }
+
+  // 页面参数 → 主进程转换参数（线程数取自设置）；不保留源文件时附带删除标记
   const options = toConversionOptions(params.value, settings.threadCount)
+  if (!settings.keepSource) options.deleteSource = true
   const task = await tasks.start({
     kind: 'video',
     input: input.value.path,
@@ -129,19 +146,27 @@ async function start() {
   }
 }
 
-/** 转换完成 → 按「完成后动作」设置打开输出目录（仅本模块的视频任务） */
+/** 转换完成 → 按「完成后动作」设置打开输出目录、并按需提示源文件删除结果（仅本模块的视频任务） */
 let disposeComplete: (() => void) | null = null
 
 onMounted(() => {
   disposeComplete =
     window.yuneeAPI?.onMainEvent('conversion-complete', (payload) => {
-    const { id } = payload as { id: string }
+    const { id, deletedSource } = payload as { id: string; deletedSource?: boolean }
     const t = tasks.tasks.find((x) => x.id === id)
-    if (t && t.kind === 'video' && settings.completeAction === 'openFolder') {
-      const parts = t.output.split(/[\\/]/)
-      parts.pop()
-      const dir = parts.join('\\') || t.output
-      void window.yuneeAPI?.openDirectory(dir)
+    if (t && t.kind === 'video') {
+      // 请求过删除源文件的任务：反馈删除结果（成功/失败的提示都有明确语义）
+      if (t.options?.deleteSource) {
+        Notification.success({
+          content: highlight(deletedSource ? '转换完成，源文件已删除。' : '转换完成，但源文件删除失败，请手动清理。'),
+        })
+      }
+      if (settings.completeAction === 'openFolder') {
+        const parts = t.output.split(/[\\/]/)
+        parts.pop()
+        const dir = parts.join('\\') || t.output
+        void window.yuneeAPI?.openDirectory(dir)
+      }
     }
   }) ?? null
 })

@@ -74,7 +74,7 @@ function runningInfo(t: ConversionTask): string {
 
     <!-- 任务列表 -->
     <div v-else class="vtask__list">
-      <div v-for="t in videoTasks" :key="t.id" class="vtask__item">
+      <div v-for="t in videoTasks" :key="t.id" class="vtask__item" :class="{ 'vtask__item--running': t.status === 'running' }">
         <!-- 首行：输入 → 输出 + 状态标签 + 操作 -->
         <div class="vtask__head">
           <div class="vtask__name" :title="`${t.input} → ${t.output}`">
@@ -126,6 +126,16 @@ function runningInfo(t: ConversionTask): string {
 
 .vtask__item {
   padding: 12px 4px;
+  border-radius: 6px;
+  /* 普通状态下的左侧描边隐藏，运行中才显形（避免宽度跳动） */
+  border-left: 3px solid transparent;
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+
+/* 运行中的任务：主色左边条 + 浅色底，突出「正在转换」的视觉重心 */
+.vtask__item--running {
+  border-left-color: var(--color-primary-6);
+  background: var(--color-primary-1);
 }
 
 .vtask__item + .vtask__item {

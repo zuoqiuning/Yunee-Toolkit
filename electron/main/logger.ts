@@ -205,15 +205,24 @@ export async function listLogFiles(): Promise<LogFileInfo[]> {
   return files
 }
 
+/** 在线查看单次读取的最大字符数（防止大日志文件一次性读入导致渲染卡顿） */
+const READ_MAX_CHARS = 500_000
+
 /**
  * 读取指定日志文件内容（供“在线查看”展示）。
  * 仅允许日期命名文件（防路径穿越）；目录未初始化 / 读取失败返回 null。
+ * 超大文件只保留开头一段并在末尾标注截断，避免整文件读入拖慢界面。
  */
 export async function readLogFile(name: string): Promise<string | null> {
   if (!currentDir) return null
   if (typeof name !== 'string' || !/^\d{4}-\d{2}-\d{2}\.log$/.test(name)) return null
   try {
-    return await fs.promises.readFile(path.join(currentDir, name), 'utf8')
+    let text = await fs.promises.readFile(path.join(currentDir, name), 'utf8')
+    if (text.length > READ_MAX_CHARS) {
+      // 字符数截断（按字符而非字节，中文场景更准确），保留开头部分供排查
+      text = `${text.slice(0, READ_MAX_CHARS)}\n…（文件过大，仅显示前 ${READ_MAX_CHARS} 字符，完整内容请直接打开日志文件查看）`
+    }
+    return text
   } catch {
     return null
   }

@@ -6,7 +6,7 @@
  *   - 只暴露经过封装的方法，绝不暴露 ipcRenderer 或任意对象本身
  *   - 渲染进程通过 window.yuneeAPI 调用，能力边界由本文件严格控制
  */
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { IpcRendererEvent } from 'electron'
 
 /**
@@ -171,6 +171,12 @@ export interface YuneeApi {
   getLicenseText: (key: string) => Promise<string | null>
   /** 弹出文件选择对话框（可按过滤器限定类型），取消返回 null */
   selectFile: (filters?: { name: string; extensions: string[] }[]) => Promise<string | null>
+  /**
+   * 获取拖拽 File 对象的真实文件系统路径（Electron 官方安全 API）。
+   * 说明：Electron 43 已移除 File.path，必须经由 webUtils.getPathForFile 获取，
+   *       否则拖拽选文件功能失效。非拖拽来源的文件（如 new File）返回空串。
+   */
+  getPathForFile: (file: File) => string
   /** 转换任务：入队一个新任务，返回创建的任务（含 id/初始状态）；校验失败返回 null */
   startConversion: (payload: {
     kind: 'video' | 'audio' | 'image' | 'container'
@@ -251,6 +257,7 @@ const api: YuneeApi = {
   applyUpdateProxy: (enabled, url) => ipcRenderer.invoke('update:apply-proxy', enabled, url),
   getLicenseText: (key) => ipcRenderer.invoke('license:get', key),
   selectFile: (filters) => ipcRenderer.invoke('dialog:select-file', filters),
+  getPathForFile: (file) => (file ? webUtils.getPathForFile(file) : ''),
   startConversion: (payload) => ipcRenderer.invoke('conversion:start', payload),
   cancelConversion: (id) => ipcRenderer.invoke('conversion:cancel', id),
   getConversionTasks: () => ipcRenderer.invoke('conversion:list'),

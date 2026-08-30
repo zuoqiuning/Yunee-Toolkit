@@ -45,12 +45,20 @@ const appStore = useAppStore()
 }
 
 /* ========== 顶部横幅（无边框 Arco 大卡片，直角） ========== */
-/* 默认显示明显阴影（深浅色由 Arco 阴影变量自动适配），一层近阴影 + 一层远阴影增加立体感；无悬浮样式 */
+/* 默认显示明显阴影（深浅色由 Arco 阴影变量自动适配），一层近阴影 + 一层远阴影增加立体感；
+   背景用「白色 → 极浅灰蓝」的横向渐变，避免纯白过于单调；hover 时阴影轻微加深 */
 .banner {
-  background: var(--color-bg-1);
+  background: linear-gradient(120deg, var(--color-bg-1) 0%, var(--color-fill-1) 100%);
   box-shadow:
     0 4px 12px var(--color-shadow-1),
     0 14px 36px var(--color-shadow-3);
+  transition: box-shadow 0.25s ease;
+}
+
+.banner:hover {
+  box-shadow:
+    0 6px 16px var(--color-shadow-1),
+    0 18px 44px var(--color-shadow-3);
 }
 
 .banner :deep(.arco-card-body) {

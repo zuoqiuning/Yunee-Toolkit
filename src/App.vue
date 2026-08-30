@@ -6,7 +6,7 @@
  */
 <script setup lang="ts">
 import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
-import { Notification } from '@arco-design/web-vue'
+import { Notification, Button } from '@arco-design/web-vue'
 import TitleBar from '@/components/common/TitleBar.vue'
 import { useAppStore } from '@/stores/app'
 import { useSettingsStore } from '@/stores/settings'
@@ -157,9 +157,9 @@ function subscribeUpdater() {
             'div',
             { style: { display: 'flex', gap: '8px', justifyContent: 'flex-end' } },
             [
-              h('a-button', { type: 'secondary', size: 'small', onClick: close }, '稍后'),
+              h(Button, { type: 'secondary', size: 'small', onClick: close }, () => '稍后'),
               h(
-                'a-button',
+                Button,
                 {
                   type: 'primary',
                   size: 'small',
@@ -175,7 +175,7 @@ function subscribeUpdater() {
                     })
                   },
                 },
-                '立即更新',
+                () => '立即更新',
               ),
             ],
           ),
@@ -215,9 +215,9 @@ function subscribeUpdater() {
             'div',
             { style: { display: 'flex', gap: '8px', justifyContent: 'flex-end' } },
             [
-              h('a-button', { type: 'secondary', size: 'small', onClick: close }, '稍后重启'),
+              h(Button, { type: 'secondary', size: 'small', onClick: close }, () => '稍后重启'),
               h(
-                'a-button',
+                Button,
                 {
                   type: 'primary',
                   size: 'small',
@@ -226,7 +226,7 @@ function subscribeUpdater() {
                     window.yuneeAPI?.installUpdate()
                   },
                 },
-                '立即重启',
+                () => '立即重启',
               ),
             ],
           ),
@@ -300,6 +300,15 @@ watch(
   { immediate: true },
 )
 
+// 更新代理配置变化时同步主进程（immediate 兜底：面板懒加载时也保证启动即对齐）
+watch(
+  [() => settings.updateProxyEnabled, () => settings.updateProxyUrl],
+  () => {
+    window.yuneeAPI?.applyUpdateProxy(settings.updateProxyEnabled, settings.updateProxyUrl)
+  },
+  { immediate: false },
+)
+
 // 主题设置同步到主进程：启动及手动切换主题 / 「跟随系统」开关变化时上报，
 // 主进程落盘用户主题，供下次启动的 Splash 加载窗口 / 主窗口背景色读取（与界面配色一致）。
 watch(
@@ -324,6 +333,9 @@ onMounted(async () => {
   await syncTempClean()
   // 订阅自动更新事件（右下角通知：检测中 / 发现新版本 / 下载进度 / 下载完成 / 失败）
   subscribeUpdater()
+  // 启动即应用「更新代理」配置：更新设置面板为懒加载（用户不进设置就不挂载），
+  // 若不在此同步，已配置代理的用户启动静默检查会直连 GitHub 而失败。
+  window.yuneeAPI?.applyUpdateProxy(settings.updateProxyEnabled, settings.updateProxyUrl)
   // 主界面就绪后再触发启动检查更新：
   // 等待当前渲染帧落定（Splash 关闭、主窗口显示、主界面元素渲染完毕）再联网，
   // 既满足「主界面出现时开始检测」，也避免加载阶段提前联网影响启动速度。

@@ -223,7 +223,7 @@ function onResetResources() {
           </a-radio-group>
         </a-space>
         <template #extra>
-          <HintText>影响转码进程在系统中的调度优先级</HintText>
+          <HintText>多个任务排队时，高优先级任务将最先开始执行</HintText>
         </template>
       </a-form-item>
     </a-card>

@@ -131,14 +131,9 @@ function onResetClick() {
 </script>
 
 <template>
-  <!-- 统一标签列宽 + 右对齐：三组音量滑块（及开关行）在水平与垂直方向整体对齐 -->
-  <a-form
-    class="panel__form"
-    layout="horizontal"
-    label-align="right"
-    :label-col="80"
-    :model="settings"
-  >
+  <!-- 与其它设置面板保持一致的默认横向布局：标签左对齐、垂直居中，
+       统一各面板的视觉节奏（不再单独使用右对齐，避免页签切换时标签左右跳动） -->
+  <a-form class="panel__form" layout="horizontal" :model="settings">
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>提示音</template>
       <template #extra><CardResetButton name="提示音" @reset="onResetSounds" /></template>

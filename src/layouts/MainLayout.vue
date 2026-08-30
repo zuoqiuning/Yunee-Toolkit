@@ -8,7 +8,7 @@
  *   - 图标：功能条目用 ToolIcon（SVG），首页/分组/关于/设置用 ArcoIcon。
  */
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ArcoIcon from '@/components/common/ArcoIcon.vue'
 import ToolIcon from '@/components/common/ToolIcon.vue'
@@ -24,6 +24,9 @@ const collapsed = ref(false)
 // 设置模态框显隐
 const settingsVisible = ref(false)
 
+// 托盘菜单「打开设置」事件的取消订阅函数（卸载时释放）
+let disposeOpenSettings: (() => void) | null = null
+
 // 默认展开所有分组的子菜单
 const expandedGroups = navGroups.map((g) => g.title)
 
@@ -36,6 +39,18 @@ watch(
     activeMenu.value = path
   },
 )
+
+// 监听托盘菜单「打开设置」：显示主窗口后由主进程推送此事件，打开设置模态框
+onMounted(() => {
+  disposeOpenSettings =
+    window.yuneeAPI?.onMainEvent('open-settings', () => {
+      settingsVisible.value = true
+    }) ?? null
+})
+
+onBeforeUnmount(() => {
+  disposeOpenSettings?.()
+})
 
 /** 点击菜单项：设置打开模态框；其余按路由跳转 */
 function onMenuClick(key: string | number) {
@@ -103,9 +118,13 @@ function onMenuClick(key: string | number) {
       </div>
     </a-layout-sider>
 
-    <!-- 右侧内容区 -->
+    <!-- 右侧内容区：路由切换带淡入过渡（page-fade 样式见全局 index.css） -->
     <a-layout-content class="layout__main">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="page-fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </a-layout-content>
 
     <!-- 设置模态框 -->

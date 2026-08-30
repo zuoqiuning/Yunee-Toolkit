@@ -38,6 +38,8 @@ export interface ConversionOptions {
   hwaccel?: 'none' | 'nvidia' | 'intel' | 'amd'
   /** 编码线程数（>0 时透传给 ffmpeg；0/缺省由 ffmpeg 自动决定） */
   threads?: number
+  /** 转换完成后是否删除源文件（对应「保留源文件」设置取反） */
+  deleteSource?: boolean
 }
 
 /** 转换进度（ffmpeg -progress 解析结果） */

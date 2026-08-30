@@ -63,6 +63,10 @@ async function selectVideo(path: string) {
       Notification.warning({ content: '该文件不含视频流，无法进行视频转换。' })
       return
     }
+    // 4K 及以上大文件：转换耗时较长，先给用户一句体量提示（不改动默认行为）
+    if (info.width >= 3840 || info.height >= 2160) {
+      Notification.info({ content: '检测到 4K 及以上视频，转换耗时可能较长，请耐心等待。' })
+    }
     picked.value = { path, info }
     emit('change', picked.value)
   } catch {
@@ -89,12 +93,15 @@ function onDragOver(e: DragEvent) {
   e.preventDefault()
 }
 
-/** 松开拖拽：取第一个文件接入（Electron 的 File 对象带 path 绝对路径属性） */
+/** 松开拖拽：取第一个文件接入，经 preload 桥接获取真实路径（Electron 43 已移除 File.path） */
 function onDrop(e: DragEvent) {
   e.preventDefault()
   dragging.value = false
-  const file = e.dataTransfer?.files?.[0] as (File & { path?: string }) | undefined
-  if (file?.path) void selectVideo(file.path)
+  const file = e.dataTransfer?.files?.[0]
+  if (!file) return
+  // 走官方安全 API webUtils.getPathForFile（由 preload 暴露），替代已废弃的 file.path
+  const path = window.yuneeAPI?.getPathForFile(file)
+  if (path) void selectVideo(path)
 }
 
 /** 移除当前选择 */
