@@ -1,6 +1,6 @@
 {
   "name": "yuneetoolkit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "屿宁工具箱 (Yunee Toolkit) —— 集众开源之力，一站式处理音视频、图片、文档、PDF 的本地万能工具箱。当前聚焦 FFmpeg 音视频套件。",
   "private": true,
   "author": "丘屿知宁",

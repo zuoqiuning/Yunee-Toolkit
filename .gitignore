@@ -12,6 +12,7 @@ dist/
 dist-electron/
 release/
 release-tmp/
+release-new/
 
 # 内置工具二进制（FFmpeg 等约 300MB，开源仓库不纳入；从官方构建下载后放入 bin/）
 bin/
