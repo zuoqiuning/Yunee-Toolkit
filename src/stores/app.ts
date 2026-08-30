@@ -2,7 +2,7 @@
  * 全局应用状态 Store
  * 职责：管理与应用整体相关的状态，如应用元信息、侧边栏折叠等。
  * 版本说明：界面统一展示测试版号「beta x.y.z」，以主进程真实版本（package.json）为数据源，
- *           纯浏览器预览等无主进程场景降级为默认的 beta 0.1.0。
+ *           纯浏览器预览等无主进程场景降级为默认的 beta 0.1.0（与 package.json 保持一致）。
  */
 import { defineStore } from 'pinia'
 
