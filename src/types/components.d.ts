@@ -61,6 +61,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SettingsModal: typeof import('./../components/settings/SettingsModal.vue')['default']
     SoundPanel: typeof import('./../components/settings/panels/SoundPanel.vue')['default']
+    SpaceDonut: typeof import('./../components/settings/panels/storage/SpaceDonut.vue')['default']
     StoragePanel: typeof import('./../components/settings/panels/StoragePanel.vue')['default']
     TitleBar: typeof import('./../components/common/TitleBar.vue')['default']
     ToolIcon: typeof import('./../components/common/ToolIcon.vue')['default']

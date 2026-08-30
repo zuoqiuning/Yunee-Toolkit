@@ -1,25 +1,22 @@
 <!--
   设置面板：存储（磁盘占用概览）
-  职责：用简约圆饼图展示“软件本身 / 工具目录 / 输出目录”占比，下方用折叠面板列出各占用明细。
+  职责：用自绘 SVG 环形图（SpaceDonut）展示「软件本身 / 工具目录 / 输出目录」占比，
+        下方用折叠面板列出各占用明细。
+
   设计：
-    - 与其他设置面板一致：卡片框架，标题栏 + 右上角“重新检测”按钮；
-    - 卡片内为居中的圆饼图（加载时显示 Arco Spin 骨架），图表文字/提示框颜色随主题深浅适配；
-    - 饼图图例由 Arco 复选框自绘：取消勾选即关闭该项占比（整块透明隐藏，仍占位保持圆环比例）；
-    - 下部 Arco 折叠面板默认全部折叠，标题行显示各项占比百分比，展开后显示占用大小与所在路径（路径可点击打开）。
-    - 数据来自主进程 storage:get-space-stat（递归统计目录占用）。
+    - 与其他设置面板一致：卡片框架，标题栏 + 右上角「重新检测」按钮；
+    - 中部为自绘环形图（替代原 ECharts，无第三方图表依赖）：悬浮分段实时显示大小与占比，
+      中央默认展示磁盘总量；环形图底部用 Arco 复选框组自绘图例（取消勾选即隐藏该项占比，
+      仍占位保持圆环比例）；
+    - 下部 Arco 折叠面板默认全部折叠：标题行显示各项占比百分比，展开后显示占用大小与所在路径
+      （路径可点击直接打开）；
+    - 数据来自主进程 storage:get-space-stat（递归统计占用），启动阶段已缓存，进入面板即可秒开。
 -->
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { PieChart } from 'echarts/charts'
-import { TooltipComponent } from 'echarts/components'
-import VChart from 'vue-echarts'
 import { Notification } from '@arco-design/web-vue'
 import { useSettingsStore } from '@/stores/settings'
-
-// 按需注册 ECharts 模块（仅饼图 + Canvas 渲染器 + 提示；图例改由 Arco 复选框自绘，不再注册 LegendComponent）
-use([CanvasRenderer, PieChart, TooltipComponent])
+import SpaceDonut, { type DonutSegment } from './storage/SpaceDonut.vue'
 
 const settings = useSettingsStore()
 
@@ -42,17 +39,6 @@ function fmtSize(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
 }
 
-/**
- * 当前生效主题是否深色（与 App.vue 规则一致）：
- * 「跟随系统」时取系统偏好，否则取手动主题。用于给 ECharts 内部文字/提示框配色，
- * 避免深色模式下图表介绍文字颜色对比不足而看不清。
- */
-const isDark = computed(() =>
-  settings.themeFollowSystem
-    ? (window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false)
-    : settings.theme === 'dark',
-)
-
 /** 三个占用分类的静态元信息（key 同时作为复选框值与折叠面板项的标识） */
 const pieKeys = [
   { key: 'app', name: '软件本身', color: '#165dff' },
@@ -60,10 +46,10 @@ const pieKeys = [
   { key: 'output', name: '输出目录', color: '#ff7d00' },
 ]
 
-/** 饼图中被「勾选显示」的分类；取消勾选即关闭该项占比（Arco 复选框组自绘图例） */
+/** 环形图中被「勾选显示」的分类；取消勾选即关闭该项占比（Arco 复选框组自绘图例） */
 const visibleKeys = ref<string[]>(['app', 'tools', 'output'])
 
-/** 分类 key → 占用字节 的映射，供饼图与明细行统一取数 */
+/** 分类 key → 占用字节 的映射，供环形图与明细行统一取数 */
 const sizeMap = computed<Record<string, number>>(() => ({
   app: appSize.value,
   tools: toolsSize.value,
@@ -83,49 +69,15 @@ const isEmpty = computed(
   () => appSize.value === 0 && toolsSize.value === 0 && outputSize.value === 0,
 )
 
-/** 饼图配置：随占用数据与主题响应式更新；简约样式，无轮廓线，图例由 Arco 复选框自绘 */
-const option = computed(() => ({
-  tooltip: {
-    trigger: 'item',
-    // 深色模式下提示框使用深底浅字，保证可读性
-    backgroundColor: isDark.value ? '#1d2129' : '#ffffff',
-    borderColor: isDark.value ? 'rgba(229,230,235,0.2)' : '#e5e6eb',
-    textStyle: { color: isDark.value ? '#e5e6eb' : '#4e5969' },
-    formatter: (p: { name: string; value: number; percent: string }) =>
-      `${p.name}：${fmtSize(Number(p.value))}（${p.percent}%）`,
-  },
-  series: [
-    {
-      name: '磁盘占用',
-      type: 'pie',
-      radius: ['40%', '66%'],
-      // 三个数据项对应 Arco 主题色：蓝 / 青 / 橙
-      color: ['#165dff', '#14c9c9', '#ff7d00'],
-      // 标签文字与引导线颜色随主题适配：深色用浅色、浅色用深色，避免深色下看不清
-      label: {
-        formatter: '{b}\n{d}%',
-        color: isDark.value ? '#e5e6eb' : '#4e5969',
-      },
-      labelLine: {
-        length: 14,
-        length2: 10,
-        lineStyle: { color: isDark.value ? 'rgba(229,230,235,0.45)' : '#a9aeb8' },
-      },
-      data: pieKeys.map((it) => {
-        const visible = visibleKeys.value.includes(it.key)
-        return {
-          value: sizeMap.value[it.key],
-          name: it.name,
-          // 取消勾选的项整块透明隐藏（仍占位保持圆环比例），标签/引导线/提示一并关闭
-          itemStyle: { opacity: visible ? 1 : 0 },
-          label: { show: visible },
-          labelLine: { show: visible },
-          tooltip: { show: visible },
-        }
-      }),
-    },
-  ],
-}))
+/** 环形图入参：三块占用的展示数据（字节值） */
+const pieSegments = computed<DonutSegment[]>(() =>
+  pieKeys.map((it) => ({
+    key: it.key,
+    name: it.name,
+    color: it.color,
+    value: sizeMap.value[it.key],
+  })),
+)
 
 /** 折叠面板明细数据：汇总三块占用，响应式更新（含占比 / 大小 / 路径） */
 const rows = computed(() =>
@@ -197,13 +149,13 @@ onMounted(() => fetchStat())
       </template>
 
       <div class="storage">
-        <!-- 中部：圆饼图 + 底部“占比显示开关”（Arco 复选框自绘图例，替代 ECharts 原生图例） -->
+        <!-- 中部：自绘环形图 + 底部“占比显示开关”（Arco 复选框组自绘图例） -->
         <div class="storage__chart">
           <!-- 加载中：仅显示加载提示 -->
           <a-spin v-if="loading" class="storage__spin" tip="正在统计占用…" />
           <template v-else>
-            <!-- 加载完成且有数据 -->
-            <VChart v-if="!isEmpty" class="storage__echart" :option="option" autoresize />
+            <!-- 加载完成且有数据：环形图中默认展示磁盘总占用，悬浮分区可查看单项 -->
+            <SpaceDonut v-if="!isEmpty" :segments="pieSegments" :visible-keys="visibleKeys" />
             <!-- 加载完成但无数据 -->
             <div v-else class="storage__empty">暂无占用数据，点击右上角「重新检测」重试。</div>
             <!-- 底部：复选框控制各项占比显隐（有数据时才显示） -->
@@ -258,23 +210,19 @@ onMounted(() => fetchStat())
   width: 100%;
 }
 
-/* 中部：圆饼图纵向排列 —— 上方图表 + 底部“占比显示开关”复选框 */
+/* 中部：环形图纵向排列 —— 上方图表 + 底部“占比显示开关”复选框 */
 .storage__chart {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 300px;
+  padding: 4px 0 8px;
 }
 
 .storage__spin {
   display: flex;
   justify-content: center;
-}
-
-.storage__echart {
-  width: 300px;
-  height: 240px;
+  padding: 70px 0;
 }
 
 /* 无数据占位 */
@@ -284,7 +232,7 @@ onMounted(() => fetchStat())
   color: var(--color-text-3);
 }
 
-/* 底部复选框（自绘图例）：水平居中、与饼图留白 */
+/* 底部复选框（自绘图例）：水平居中、与环形图留白 */
 .storage__legend {
   margin-top: 4px;
 }
