@@ -8,6 +8,7 @@ import { computed } from 'vue'
 import { Notification } from '@arco-design/web-vue'
 import { useSettingsStore } from '@/stores/settings'
 import { highlight } from '@/utils/notify'
+import HintText from '@/components/common/HintText.vue'
 
 /** 输出路径解析结果（主进程返回） */
 const props = defineProps<{
@@ -73,15 +74,18 @@ async function openDir() {
   <a-card class="panel__card" :bordered="true" size="small">
     <template #title>输出位置</template>
     <a-form class="panel__form" layout="horizontal" :model="settings">
-      <a-form-item label="输出目录" extra="留空表示与源文件同目录">
+      <a-form-item label="输出目录">
         <a-input-group class="panel__dir-group">
           <a-input :model-value="dirText" readonly disabled />
           <a-button @click="openDir">打开</a-button>
           <a-button type="primary" @click="pickDir">更改</a-button>
         </a-input-group>
+        <template #extra>
+          <HintText>留空表示与源文件同目录</HintText>
+        </template>
       </a-form-item>
 
-      <a-form-item label="输出文件" extra="文件名按「命名预设」自动生成">
+      <a-form-item label="输出文件">
         <div class="voutput__file">
           <a-spin :loading="resolving" :size="14">
             <a-input
@@ -94,6 +98,9 @@ async function openDir() {
           <a-tag v-if="output?.exists" color="orange">已存在</a-tag>
           <a-tag color="gray">{{ policyText }}</a-tag>
         </div>
+        <template #extra>
+          <HintText>文件名按「命名预设」自动生成</HintText>
+        </template>
       </a-form-item>
     </a-form>
   </a-card>
@@ -104,5 +111,10 @@ async function openDir() {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* 设置项名称与右侧控件垂直居中，与设置弹窗面板保持一致 */
+.panel__form :deep(.arco-form-item) {
+  align-items: center;
 }
 </style>

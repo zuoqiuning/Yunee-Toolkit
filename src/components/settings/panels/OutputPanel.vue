@@ -12,6 +12,7 @@ import { Notification } from '@arco-design/web-vue'
 import { useSettingsStore } from '@/stores/settings'
 import { highlight } from '@/utils/notify'
 import { fitNumberInputWidth } from '@/utils/numberWidth'
+import HintText from '@/components/common/HintText.vue'
 import CardResetButton from '../common/CardResetButton.vue'
 
 const settings = useSettingsStore()
@@ -192,7 +193,7 @@ onMounted(fetchDataDir)
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>输出位置</template>
       <template #extra><CardResetButton name="输出位置" @reset="onResetLocation" /></template>
-      <a-form-item label="默认输出目录" extra="未单独指定时输出到哪里；留空表示与源文件同目录">
+      <a-form-item label="默认输出目录">
         <a-popover
           v-if="settings.outputDir"
           position="bottom"
@@ -209,6 +210,9 @@ onMounted(fetchDataDir)
           <a-button @click="openDir(settings.outputDir)">打开</a-button>
           <a-button type="primary" @click="pickDir">更改</a-button>
         </a-input-group>
+        <template #extra>
+          <HintText>未单独指定时输出到哪里；留空表示与源文件同目录</HintText>
+        </template>
       </a-form-item>
     </a-card>
 
@@ -216,7 +220,7 @@ onMounted(fetchDataDir)
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>文件行为</template>
       <template #extra><CardResetButton name="文件行为" @reset="onResetBehavior" /></template>
-      <a-form-item label="文件重名策略" extra="输出文件与已有文件重名时的处理方式">
+      <a-form-item label="文件重名策略">
         <a-space wrap>
           <a-radio-group v-model="settings.overwritePolicy" type="button" @change="onOverwriteChange">
             <a-radio value="autoRename">自动改名</a-radio>
@@ -224,17 +228,26 @@ onMounted(fetchDataDir)
             <a-radio value="ask">每次询问</a-radio>
           </a-radio-group>
         </a-space>
+        <template #extra>
+          <HintText>输出文件与已有文件重名时的处理方式</HintText>
+        </template>
       </a-form-item>
 
-      <a-form-item label="转换完成后" extra="任务结束后自动执行的动作">
+      <a-form-item label="转换完成后">
         <a-select v-model="settings.completeAction" style="width: 220px" @change="onCompleteActionChange">
           <a-option value="openFolder">打开输出目录</a-option>
           <a-option value="none">不做任何操作</a-option>
         </a-select>
+        <template #extra>
+          <HintText>任务结束后自动执行的动作</HintText>
+        </template>
       </a-form-item>
 
-      <a-form-item label="保留源文件" extra="转换 / 提取完成后是否删除源文件">
+      <a-form-item label="保留源文件">
         <a-switch v-model="settings.keepSource" @change="onKeepSourceChange" />
+        <template #extra>
+          <HintText>转换 / 提取完成后是否删除源文件</HintText>
+        </template>
       </a-form-item>
     </a-card>
 
@@ -242,7 +255,7 @@ onMounted(fetchDataDir)
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>文件命名</template>
       <template #extra><CardResetButton name="文件命名" @reset="onResetNaming" /></template>
-      <a-form-item label="命名预设" extra="转换后输出文件的命名方式；时间戳取自转换时刻">
+      <a-form-item label="命名预设">
         <a-radio-group
           :model-value="settings.fileNamePreset"
           type="button"
@@ -252,6 +265,9 @@ onMounted(fetchDataDir)
           <a-radio value="time-suffix">追加时间戳</a-radio>
           <a-radio value="time-prefix">前置时间戳</a-radio>
         </a-radio-group>
+        <template #extra>
+          <HintText>转换后输出文件的命名方式；时间戳取自转换时刻</HintText>
+        </template>
       </a-form-item>
     </a-card>
 
@@ -259,7 +275,7 @@ onMounted(fetchDataDir)
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>临时文件</template>
       <template #extra><CardResetButton name="临时文件" @reset="onResetTemp" /></template>
-      <a-form-item label="临时目录" extra="大型转换时的中间文件存放位置；留空使用系统默认">
+      <a-form-item label="临时目录">
         <a-popover
           v-if="settings.tempDir"
           position="bottom"
@@ -276,13 +292,19 @@ onMounted(fetchDataDir)
           <a-button @click="openDir(settings.tempDir)">打开</a-button>
           <a-button type="primary" @click="pickTempDir">更改</a-button>
         </a-input-group>
+        <template #extra>
+          <HintText>大型转换时的中间文件存放位置；留空使用系统默认</HintText>
+        </template>
       </a-form-item>
 
-      <a-form-item label="自动清理" extra="转换结束后自动清理临时文件，保持磁盘整洁">
+      <a-form-item label="自动清理">
         <a-switch v-model="settings.autoCleanTemp" @change="onAutoCleanChange" />
+        <template #extra>
+          <HintText>转换结束后自动清理临时文件，保持磁盘整洁</HintText>
+        </template>
       </a-form-item>
 
-      <a-form-item v-if="settings.autoCleanTemp" label="保留天数" extra="临时文件保留超过该天数后自动删除">
+      <a-form-item v-if="settings.autoCleanTemp" label="保留天数">
         <a-input-number
           v-model="settings.cleanRetainDays"
           :min="0"
@@ -293,26 +315,32 @@ onMounted(fetchDataDir)
         >
           <template #suffix>天</template>
         </a-input-number>
+        <template #extra>
+          <HintText>临时文件保留超过该天数后自动删除</HintText>
+        </template>
       </a-form-item>
 
-      <a-form-item label="立即清理" extra="删除当前临时目录下的所有文件">
+      <a-form-item label="立即清理">
         <a-button :loading="cleaning" status="danger" @click="cleanNow">清理</a-button>
+        <template #extra>
+          <HintText>删除当前临时目录下的所有文件</HintText>
+        </template>
       </a-form-item>
     </a-card>
 
     <!-- 数据存储（只读） -->
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>数据存储</template>
-      <a-form-item
-        label="数据存储目录"
-        extra="存放设置与各项参数；开发模式存于项目 data 文件夹，安装版存于系统用户数据目录"
-      >
+      <a-form-item label="数据存储目录">
         <a-popover :content="dataDir" position="bottom">
           <a-input-group class="panel__dir-group">
             <a-input :model-value="dataDir || '正在获取…'" readonly disabled />
             <a-button @click="openDir(dataDir)">打开</a-button>
           </a-input-group>
         </a-popover>
+        <template #extra>
+          <HintText>存放设置与各项参数；开发模式存于项目 data 文件夹，安装版存于系统用户数据目录</HintText>
+        </template>
       </a-form-item>
     </a-card>
   </a-form>

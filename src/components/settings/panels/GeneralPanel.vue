@@ -11,6 +11,7 @@ import { onMounted, ref } from 'vue'
 import { Notification } from '@arco-design/web-vue'
 import { useSettingsStore } from '@/stores/settings'
 import { highlight } from '@/utils/notify'
+import HintText from '@/components/common/HintText.vue'
 import CardResetButton from '../common/CardResetButton.vue'
 
 const settings = useSettingsStore()
@@ -86,8 +87,11 @@ function onResetCloseWindow() {
       <a-card class="panel__card" :bordered="true" size="small">
       <template #title>启动</template>
       <template #extra><CardResetButton name="启动" @reset="onResetStartup" /></template>
-      <a-form-item label="开机自启" extra="随系统登录自动启动软件（仅 Windows）">
+      <a-form-item label="开机自启">
         <a-switch v-model="autoStartVal" @change="onAutoStartChange" />
+        <template #extra>
+          <HintText>随系统登录自动启动软件（仅 Windows）</HintText>
+        </template>
       </a-form-item>
     </a-card>
 
@@ -95,10 +99,7 @@ function onResetCloseWindow() {
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>关闭窗口</template>
       <template #extra><CardResetButton name="关闭窗口" @reset="onResetCloseWindow" /></template>
-      <a-form-item
-        label="关闭窗口行为"
-        extra="“最小化到托盘”时关闭窗口不退出软件，可从系统托盘恢复"
-      >
+      <a-form-item label="关闭窗口行为">
         <a-radio-group
           :model-value="settings.closeBehavior"
           type="button"
@@ -107,6 +108,9 @@ function onResetCloseWindow() {
           <a-radio value="exit">退出</a-radio>
           <a-radio value="tray">最小化到托盘</a-radio>
         </a-radio-group>
+        <template #extra>
+          <HintText>“最小化到托盘”时关闭窗口不退出软件，可从系统托盘恢复</HintText>
+        </template>
       </a-form-item>
       </a-card>
   </a-form>

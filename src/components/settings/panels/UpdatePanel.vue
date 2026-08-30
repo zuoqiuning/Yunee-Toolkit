@@ -13,6 +13,7 @@ import { Notification } from '@arco-design/web-vue'
 import { useAppStore } from '@/stores/app'
 import { useSettingsStore } from '@/stores/settings'
 import { highlight } from '@/utils/notify'
+import HintText from '@/components/common/HintText.vue'
 import CardResetButton from '../common/CardResetButton.vue'
 
 const appStore = useAppStore()
@@ -97,7 +98,37 @@ function onResetCheckOnStart() {
   settings.resetFields(['checkUpdateOnStart'])
 }
 
-onMounted(subscribe)
+/** 同步更新代理配置到主进程（面板挂载 / 设置变更时调用，保证检查更新使用最新配置） */
+function syncProxy() {
+  window.yuneeAPI?.applyUpdateProxy(settings.updateProxyEnabled, settings.updateProxyUrl)
+}
+
+/** 启用更新代理开关变更：同步主进程 + 通知 */
+function onProxyEnabledChange(value: string | number | boolean) {
+  syncProxy()
+  Notification.success({
+    content: highlight(value ? '已「开启」更新代理，更新请求将走代理地址。' : '已「关闭」更新代理，恢复系统代理。'),
+  })
+}
+
+/** 代理地址变更（失焦 / 回车）：同步主进程 + 通知 */
+function onProxyUrlChange(value: string | number) {
+  syncProxy()
+  Notification.success({
+    content: highlight(`更新代理地址已保存：${String(value).trim() || '（未填写）'}。`),
+  })
+}
+
+/** 复位“更新代理”设置 */
+function onResetProxy() {
+  settings.resetFields(['updateProxyEnabled', 'updateProxyUrl'])
+  syncProxy()
+}
+
+onMounted(() => {
+  subscribe()
+  syncProxy()
+})
 onBeforeUnmount(() => disposers.forEach((off) => off()))
 </script>
 
@@ -166,14 +197,48 @@ onBeforeUnmount(() => disposers.forEach((off) => off()))
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>启动检查</template>
       <template #extra><CardResetButton name="启动检查" @reset="onResetCheckOnStart" /></template>
-      <a-form-item label="启动时检查更新" extra="每次启动应用时静默检查是否有新版本">
+      <a-form-item label="启动时检查更新">
         <a-switch v-model="settings.checkUpdateOnStart" @change="onCheckOnStartChange" />
+        <template #extra>
+          <HintText>每次启动应用时静默检查是否有新版本</HintText>
+        </template>
+      </a-form-item>
+    </a-card>
+
+    <!-- 更新代理：直连 GitHub 更新源不稳定时，可配置 HTTP/SOCKS5 代理加速更新检查与下载 -->
+    <a-card class="panel__card" :bordered="true" size="small">
+      <template #title>更新代理</template>
+      <template #extra><CardResetButton name="更新代理" @reset="onResetProxy" /></template>
+
+      <a-form-item label="启用更新代理">
+        <a-switch v-model="settings.updateProxyEnabled" @change="onProxyEnabledChange" />
+        <template #extra>
+          <HintText>直连 GitHub 更新源不稳定时，开启后将通过代理服务器检查与下载更新</HintText>
+        </template>
+      </a-form-item>
+
+      <a-form-item label="代理地址">
+        <a-input
+          v-model="settings.updateProxyUrl"
+          class="update__proxy-input"
+          placeholder="http://127.0.0.1:7890"
+          allow-clear
+          @change="onProxyUrlChange"
+        />
+        <template #extra>
+          <HintText>支持 http / https / socks5 协议，如 http://127.0.0.1:7890</HintText>
+        </template>
       </a-form-item>
     </a-card>
   </a-form>
 </template>
 
 <style scoped>
+/* 卡片间距：与其它设置面板保持一致（12px） */
+.panel__card + .panel__card {
+  margin-top: 12px;
+}
+
 /* 更新状态区：横向排布，紧跟版本项下方，给出当前更新流程的即时反馈 */
 .update__status {
   display: flex;
@@ -194,6 +259,11 @@ onBeforeUnmount(() => disposers.forEach((off) => off()))
 /* 失败文案：警示色 */
 .update__status-error {
   color: rgb(var(--red-6));
+}
+
+/* 代理地址输入框：较长地址也能完整显示 */
+.update__proxy-input {
+  width: 360px;
 }
 
 /* 状态文本：避免被压缩换行 */

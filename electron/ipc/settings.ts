@@ -13,17 +13,39 @@ import os from 'node:os'
 import path from 'node:path'
 import { getBinRootPath } from '../main/ffmpeg/paths'
 import { getDataDir, isUsingCustomDataDir, getAppBaseDir } from '../main/dataDir'
+import { writeUserTheme } from '../main/userTheme'
 import { startupCache } from '../main/cache'
 import { info as logInfo, warn as logWarn } from '../main/logger'
 
 /**
+ * 生产环境默认目录基底（输出 / 临时 / 日志均位于其下）。
+ * 策略：优先使用「安装目录」——用户可自定义安装位置（通常是可写目录），
+ *       符合「默认创建在安装目录下」的预期；
+ *       若安装目录不可写（如默认装进 Program Files 的只读目录），自动回退到
+ *       「文档」目录下的应用子目录，保证软件始终可用（不会因无权写入而报错）。
+ * 开发环境直接使用项目根目录。
+ */
+function resolveDefaultBaseDir(): string {
+  if (!app.isPackaged) return app.getAppPath()
+  const installDir = path.dirname(app.getPath('exe'))
+  // 写权限探测：在安装目录创建并删除一个临时探测文件，成功即视为可写
+  const probe = path.join(installDir, `.yunee-write-${Date.now()}`)
+  try {
+    fs.writeFileSync(probe, '')
+    fs.rmSync(probe, { force: true })
+    return installDir
+  } catch {
+    // 安装目录无写权限（常见于 Program Files）→ 回退文档目录
+    return path.join(app.getPath('documents'), 'YuneeToolkit')
+  }
+}
+
+/**
  * 计算并确保默认日志目录存在并返回。
- * 生产环境：文档目录下的 YuneeToolkit/log；开发环境：项目根目录/log。
+ * 生产环境：安装目录（不可写时回退文档目录）下的 log；开发环境：项目根目录/log。
  */
 export function getDefaultLogDir(): string {
-  const baseDir = app.isPackaged
-    ? path.join(app.getPath('documents'), 'YuneeToolkit')
-    : app.getAppPath()
+  const baseDir = resolveDefaultBaseDir()
   const logDir = path.join(baseDir, 'log')
   try {
     fs.mkdirSync(logDir, { recursive: true })
@@ -158,15 +180,19 @@ function isPathInside(child: string, parent: string): boolean {
  * 注册设置相关 IPC 处理器
  */
 export function registerSettingsIpc(): void {
+  // 用户主题设置同步：渲染进程启动 / 主题变更时上报，主进程落盘到用户数据目录，
+  // 供下次启动的 Splash 加载窗口 / 主窗口背景色读取（与用户设置的界面配色一致）。
+  ipcMain.handle('settings:sync-user-theme', (_e, theme: unknown, followSystem: unknown) => {
+    const t = theme === 'dark' || theme === 'light' ? theme : 'light'
+    writeUserTheme({ theme: t, themeFollowSystem: followSystem === true })
+  })
+
   // 返回默认输出/临时目录，并在不存在时自动创建
+  // 生产环境：安装目录（不可写时回退文档目录）下的 output/tempfiles/log；
+  //           installDir 始终返回安装目录，供“软件本身”占用 / 路径展示使用。
   ipcMain.handle('app:get-default-dirs', () => {
-    // 开发环境：以项目根目录为基底（app.getAppPath() 即项目根），便于开发测试；
-    // 生产环境：安装目录（如 Program Files）通常无写权限，改用“文档”目录下的应用子目录，
-    // installDir 仍返回安装目录，仅作为“软件本身”占用/路径展示使用。
     const installDir = app.isPackaged ? path.dirname(app.getPath('exe')) : app.getAppPath()
-    const baseDir = app.isPackaged
-      ? path.join(app.getPath('documents'), 'YuneeToolkit')
-      : app.getAppPath()
+    const baseDir = resolveDefaultBaseDir()
     const outputDir = path.join(baseDir, 'output')
     const tempDir = path.join(baseDir, 'tempfiles')
     const logDir = getDefaultLogDir()

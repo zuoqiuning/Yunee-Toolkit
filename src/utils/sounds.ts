@@ -428,6 +428,24 @@ export const CLICK_SOUNDS: SoundPreset[] = [
     tones: [{ freq: 850, start: 0, type: 'triangle', duration: 0.035, volume: 0.08, attack: 0.005 }],
   },
   {
+    id: 'keyboard1',
+    label: '键盘轻敲',
+    desc: '机械键盘般的清脆敲击，短促有力',
+    tones: [
+      { freq: 1200, start: 0, type: 'triangle', duration: 0.04, volume: 0.12, attack: 0.005 },
+      { freq: 800, start: 0.02, type: 'triangle', duration: 0.05, volume: 0.08, attack: 0.005 },
+    ],
+  },
+  {
+    id: 'keyboard2',
+    label: '薄膜键盘',
+    desc: '薄膜键盘的柔和按压感，低音量不刺耳',
+    tones: [
+      { freq: 900, start: 0, type: 'sine', duration: 0.05, volume: 0.1, attack: 0.01 },
+      { freq: 600, start: 0.03, type: 'sine', duration: 0.06, volume: 0.07, attack: 0.01 },
+    ],
+  },
+  {
     id: 'piano',
     label: '钢琴轻点',
     desc: '单音钢琴轻点一下，干净优雅',
@@ -561,11 +579,16 @@ for (const preset of [...COMPLETE_SOUNDS, ...ERROR_SOUNDS, ...CLICK_SOUNDS]) {
  * 按声音 id 播放提示音。
  * @param id 声音预设 id（设置项 soundComplete / soundError / clickSound 中保存的值）
  * @param fallbackId 兜底声音 id（分组内找不到时用）
+ * @param volume 外部音量系数 0-1（来自「设置 → 声音 → 音量」滑块，默认 1 即原始音量）
  */
-export function playSoundById(id: string, fallbackId?: string): void {
+export function playSoundById(id: string, fallbackId?: string, volume: number = 1): void {
   const ctx = getCtx()
   if (!ctx) return
   const preset = PRESET_INDEX[id] ?? (fallbackId ? PRESET_INDEX[fallbackId] : COMPLETE_SOUNDS[0])
   if (!preset) return
-  for (const tone of preset.tones) playTone(ctx, tone)
+  // 音量缩放：以每个音的基础音量为底，乘以外部音量系数，实现完成/失败/点击音的独立调节
+  for (const tone of preset.tones) {
+    const base = tone.volume ?? 0.16
+    playTone(ctx, { ...tone, volume: base * volume })
+  }
 }

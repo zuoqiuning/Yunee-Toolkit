@@ -150,13 +150,20 @@ function onReset() {
   border-radius: 0;
 }
 
-/* 内容区：占满剩余高度，与外框架同色衬底，仅面板内容在内部滚动 */
+/* 内容区：占满剩余高度，与选项卡选中态同色（bg-1），仅面板内容在内部滚动 */
 .modal__tabs :deep(.arco-tabs-content) {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding: 12px 16px 8px;
-  background-color: var(--color-fill-2);
+  background-color: var(--color-bg-1);
+}
+
+/* 设置面板统一：设置项名称与右侧控件「垂直居中」对齐，
+   Arco 默认 flex-start 顶部对齐会导致名称相对控件偏上（实测最多偏差约 7px）；
+   居中后普通项偏差归零，带提示卡项仅余约 1-2px 可接受偏差 */
+.modal__tabs :deep(.panel__form .arco-form-item) {
+  align-items: center;
 }
 
 /* 底部操作栏：恢复默认在左，关闭在右（与「查看协议」模态框底部对齐一致） */

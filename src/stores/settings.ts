@@ -45,6 +45,8 @@ const FIELD_NAMES = [
   'logMaxFiles',
   'closeBehavior',
   'checkUpdateOnStart',
+  'updateProxyEnabled',
+  'updateProxyUrl',
   'themeFollowSystem',
   'fileNamePreset',
   'playSoundOnComplete',
@@ -53,6 +55,9 @@ const FIELD_NAMES = [
   'soundError',
   'playClickSound',
   'clickSound',
+  'soundCompleteVolume',
+  'soundErrorVolume',
+  'clickSoundVolume',
 ] as const
 
 /** 本地持久化键名 */
@@ -139,6 +144,10 @@ interface SettingsState {
   closeBehavior: CloseBehavior
   /** 启动时检查更新 */
   checkUpdateOnStart: boolean
+  /** 更新代理：是否启用（直连 GitHub 更新源不稳定时走代理） */
+  updateProxyEnabled: boolean
+  /** 更新代理地址（http/https/socks5，如 http://127.0.0.1:7890） */
+  updateProxyUrl: string
   /** 是否跟随系统深浅色主题（开启后手动主题切换失效） */
   themeFollowSystem: boolean
   /** 输出文件命名预设 */
@@ -155,6 +164,12 @@ interface SettingsState {
   playClickSound: boolean
   /** 按钮点击提示音（声音库 id，见 utils/sounds.ts CLICK_SOUNDS） */
   clickSound: string
+  /** 转换完成提示音音量（0-100，播放时除以 100 作为音量系数） */
+  soundCompleteVolume: number
+  /** 转换失败提示音音量（0-100） */
+  soundErrorVolume: number
+  /** 按钮点击音效音量（0-100） */
+  clickSoundVolume: number
 }
 
 /** 默认设置 */
@@ -177,14 +192,19 @@ const DEFAULTS: SettingsState = {
   logMaxFiles: 50,
   closeBehavior: 'exit',
   checkUpdateOnStart: true,
+  updateProxyEnabled: false,
+  updateProxyUrl: '',
   themeFollowSystem: false,
   fileNamePreset: 'keep',
   playSoundOnComplete: true,
   playSoundOnError: true,
   soundComplete: 'chime',
   soundError: 'fall',
-  playClickSound: true,
+  playClickSound: false, // 按钮点击音效默认关闭（避免打扰）
   clickSound: 'tick',
+  soundCompleteVolume: 100,
+  soundErrorVolume: 100,
+  clickSoundVolume: 100,
 }
 
 /** 从 localStorage 安全读取设置，失败或缺失时回退默认值 */
@@ -225,6 +245,8 @@ export const useSettingsStore = defineStore('settings', () => {
   const logMaxFiles = ref(state.logMaxFiles)
   const closeBehavior = ref<CloseBehavior>(state.closeBehavior)
   const checkUpdateOnStart = ref(state.checkUpdateOnStart)
+  const updateProxyEnabled = ref(state.updateProxyEnabled)
+  const updateProxyUrl = ref(state.updateProxyUrl)
   const themeFollowSystem = ref(state.themeFollowSystem)
   const fileNamePreset = ref<FileNamePreset>(state.fileNamePreset)
   const playSoundOnComplete = ref(state.playSoundOnComplete)
@@ -233,6 +255,9 @@ export const useSettingsStore = defineStore('settings', () => {
   const soundError = ref(state.soundError)
   const playClickSound = ref(state.playClickSound)
   const clickSound = ref(state.clickSound)
+  const soundCompleteVolume = ref(state.soundCompleteVolume)
+  const soundErrorVolume = ref(state.soundErrorVolume)
+  const clickSoundVolume = ref(state.clickSoundVolume)
 
   // 字段名 -> 响应式 ref 映射，供按面板/按卡片定点恢复默认值
   const fieldRefs: Record<keyof SettingsState, { value: unknown }> = {
@@ -254,6 +279,8 @@ export const useSettingsStore = defineStore('settings', () => {
     logMaxFiles,
     closeBehavior,
     checkUpdateOnStart,
+    updateProxyEnabled,
+    updateProxyUrl,
     themeFollowSystem,
     fileNamePreset,
     playSoundOnComplete,
@@ -262,6 +289,9 @@ export const useSettingsStore = defineStore('settings', () => {
     soundError,
     playClickSound,
     clickSound,
+    soundCompleteVolume,
+    soundErrorVolume,
+    clickSoundVolume,
   }
 
   // 任何字段变化时立即写入 localStorage（读取各 ref 当前值，序列化后保存）
@@ -285,6 +315,8 @@ export const useSettingsStore = defineStore('settings', () => {
       logMaxFiles,
       closeBehavior,
       checkUpdateOnStart,
+      updateProxyEnabled,
+      updateProxyUrl,
       themeFollowSystem,
       fileNamePreset,
       playSoundOnComplete,
@@ -293,6 +325,9 @@ export const useSettingsStore = defineStore('settings', () => {
       soundError,
       playClickSound,
       clickSound,
+      soundCompleteVolume,
+      soundErrorVolume,
+      clickSoundVolume,
     ],
     () => {
       try {
@@ -317,6 +352,8 @@ export const useSettingsStore = defineStore('settings', () => {
             logMaxFiles: logMaxFiles.value,
             closeBehavior: closeBehavior.value,
             checkUpdateOnStart: checkUpdateOnStart.value,
+            updateProxyEnabled: updateProxyEnabled.value,
+            updateProxyUrl: updateProxyUrl.value,
             themeFollowSystem: themeFollowSystem.value,
             fileNamePreset: fileNamePreset.value,
             playSoundOnComplete: playSoundOnComplete.value,
@@ -325,6 +362,9 @@ export const useSettingsStore = defineStore('settings', () => {
             soundError: soundError.value,
             playClickSound: playClickSound.value,
             clickSound: clickSound.value,
+            soundCompleteVolume: soundCompleteVolume.value,
+            soundErrorVolume: soundErrorVolume.value,
+            clickSoundVolume: clickSoundVolume.value,
           }),
         )
       } catch {
@@ -355,6 +395,8 @@ export const useSettingsStore = defineStore('settings', () => {
       logMaxFiles,
       closeBehavior,
       checkUpdateOnStart,
+      updateProxyEnabled,
+      updateProxyUrl,
       themeFollowSystem,
       fileNamePreset,
       playSoundOnComplete,
@@ -363,6 +405,9 @@ export const useSettingsStore = defineStore('settings', () => {
       soundError,
       playClickSound,
       clickSound,
+      soundCompleteVolume,
+      soundErrorVolume,
+      clickSoundVolume,
     ],
     (newVals: unknown[], oldVals: unknown[]) => {
       const parts: string[] = []
@@ -408,6 +453,8 @@ export const useSettingsStore = defineStore('settings', () => {
     logMaxFiles.value = DEFAULTS.logMaxFiles
     closeBehavior.value = DEFAULTS.closeBehavior
     checkUpdateOnStart.value = DEFAULTS.checkUpdateOnStart
+    updateProxyEnabled.value = DEFAULTS.updateProxyEnabled
+    updateProxyUrl.value = DEFAULTS.updateProxyUrl
     themeFollowSystem.value = DEFAULTS.themeFollowSystem
     fileNamePreset.value = DEFAULTS.fileNamePreset
     playSoundOnComplete.value = DEFAULTS.playSoundOnComplete
@@ -416,6 +463,9 @@ export const useSettingsStore = defineStore('settings', () => {
     soundError.value = DEFAULTS.soundError
     playClickSound.value = DEFAULTS.playClickSound
     clickSound.value = DEFAULTS.clickSound
+    soundCompleteVolume.value = DEFAULTS.soundCompleteVolume
+    soundErrorVolume.value = DEFAULTS.soundErrorVolume
+    clickSoundVolume.value = DEFAULTS.clickSoundVolume
   }
 
   /** 仅将指定的若干字段恢复为默认值（用于各设置卡片表头的“恢复默认”） */
@@ -426,7 +476,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   /**
-   * 应用默认输出/临时目录（开发为项目根目录，生产为文档目录下的应用子目录）。
+   * 应用默认输出/临时目录（开发为项目根目录，生产为安装目录，不可写时回退文档目录）。
    * 规则（绝不覆盖用户主动选择）：
    *   - 当前值为空 → 回填默认；
    *   - 当前值仍等于“上次应用的默认值”但默认已变更 → 迁移到新默认（解决历史默认路径变更的旧残留）；
@@ -472,6 +522,8 @@ export const useSettingsStore = defineStore('settings', () => {
     logMaxFiles,
     closeBehavior,
     checkUpdateOnStart,
+    updateProxyEnabled,
+    updateProxyUrl,
     themeFollowSystem,
     fileNamePreset,
     playSoundOnComplete,
@@ -480,6 +532,9 @@ export const useSettingsStore = defineStore('settings', () => {
     soundError,
     playClickSound,
     clickSound,
+    soundCompleteVolume,
+    soundErrorVolume,
+    clickSoundVolume,
     reset,
     resetFields,
     applyDefaultDirs,

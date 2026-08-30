@@ -159,10 +159,14 @@ export interface YuneeApi {
   readLog: (name: string) => Promise<string | null>
   /** 临时文件清理：上报自动清理配置（目录 + 开关 + 保留天数），主进程据此启动时按天清理残留，返回移除条目数 */
   syncTempClean: (tempDir: string, autoClean: boolean, retainDays: number) => Promise<number>
+  /** 用户主题设置：同步到主进程（落盘供 Splash 加载窗口 / 主窗口背景色读取，与界面配色一致） */
+  syncUserTheme: (theme: 'light' | 'dark', followSystem: boolean) => Promise<boolean>
   /** 自动更新：触发一次更新检查（manual=true 用户手动触发，无更新/出错会提示；false 启动静默检查） */
   checkForUpdates: (manual?: boolean) => Promise<boolean>
   /** 自动更新：立即重启并安装已下载的更新 */
   installUpdate: () => Promise<boolean>
+  /** 自动更新：应用「更新代理」配置（enabled=开关，url=代理地址，如 http://127.0.0.1:7890） */
+  applyUpdateProxy: (enabled: boolean, url: string) => Promise<boolean>
   /** 开源协议：读取指定开源项目的协议文本（未登记/读取失败返回 null） */
   getLicenseText: (key: string) => Promise<string | null>
   /** 弹出文件选择对话框（可按过滤器限定类型），取消返回 null */
@@ -240,8 +244,11 @@ const api: YuneeApi = {
   readLog: (name) => ipcRenderer.invoke('log:read', name),
   syncTempClean: (tempDir, autoClean, retainDays) =>
     ipcRenderer.invoke('storage:sync-temp-clean', tempDir, autoClean, retainDays),
+  syncUserTheme: (theme, followSystem) =>
+    ipcRenderer.invoke('settings:sync-user-theme', theme, followSystem),
   checkForUpdates: (manual) => ipcRenderer.invoke('update:check', manual === true),
   installUpdate: () => ipcRenderer.invoke('update:install'),
+  applyUpdateProxy: (enabled, url) => ipcRenderer.invoke('update:apply-proxy', enabled, url),
   getLicenseText: (key) => ipcRenderer.invoke('license:get', key),
   selectFile: (filters) => ipcRenderer.invoke('dialog:select-file', filters),
   startConversion: (payload) => ipcRenderer.invoke('conversion:start', payload),

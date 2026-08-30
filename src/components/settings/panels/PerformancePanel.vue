@@ -16,6 +16,7 @@ import { useHardwareStore } from '@/stores/hardware'
 import { useCpuStore } from '@/stores/cpu'
 import { highlight } from '@/utils/notify'
 import { fitNumberInputWidth } from '@/utils/numberWidth'
+import HintText from '@/components/common/HintText.vue'
 import CardResetButton from '../common/CardResetButton.vue'
 import GpuDetectCard from './performance/GpuDetectCard.vue'
 
@@ -88,6 +89,13 @@ const hwExtra = computed(() => {
   if (parts.length) return `当前显卡不支持${parts.join(' / ')}加速，相关选项已置灰`
   return '检测到显卡，支持对应品牌的硬件加速'
 })
+
+/** 加速方案提示主题：存在不支持品牌时用警示色，否则普通信息 */
+const hwAlertType = computed<'info' | 'warning'>(() =>
+  gpuDisabled.value.nvidia || gpuDisabled.value.amd || gpuDisabled.value.intel
+    ? 'warning'
+    : 'info',
+)
 
 /** 硬件加速方案变更反馈 */
 function onHwChange(value: string | number | boolean) {
@@ -164,11 +172,14 @@ function onResetResources() {
       <template #extra><CardResetButton name="硬件加速" @reset="onResetHw" /></template>
 
       <!-- 显卡检测区（性能面板顶部，启动阶段已检测完毕） -->
-      <a-form-item label="显卡检测" extra="启动时自动探测，用于推荐加速方案">
+      <a-form-item label="显卡检测">
         <GpuDetectCard />
+        <template #extra>
+          <HintText>启动时自动探测，用于推荐加速方案</HintText>
+        </template>
       </a-form-item>
 
-      <a-form-item label="加速方案" :extra="hwExtra">
+      <a-form-item label="加速方案">
         <a-space wrap>
           <a-radio-group v-model="settings.hwAccel" type="button" @change="onHwChange">
             <a-radio value="auto">自动</a-radio>
@@ -178,6 +189,9 @@ function onResetResources() {
             <a-radio value="cpu">CPU</a-radio>
           </a-radio-group>
         </a-space>
+        <template #extra>
+          <HintText :type="hwAlertType">{{ hwExtra }}</HintText>
+        </template>
       </a-form-item>
     </a-card>
 
@@ -185,7 +199,7 @@ function onResetResources() {
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>资源占用</template>
       <template #extra><CardResetButton name="资源占用" @reset="onResetResources" /></template>
-      <a-form-item label="编码线程数" :extra="threadExtra">
+      <a-form-item label="编码线程数">
         <a-input-number
           v-model="settings.threadCount"
           :min="0"
@@ -195,9 +209,12 @@ function onResetResources() {
           @change="onThreadsChange"
         />
         <span class="threads__unit">核</span>
+        <template #extra>
+          <HintText>{{ threadExtra }}</HintText>
+        </template>
       </a-form-item>
 
-      <a-form-item label="任务优先级" extra="影响转码进程在系统中的调度优先级">
+      <a-form-item label="任务优先级">
         <a-space wrap>
           <a-radio-group v-model="settings.taskPriority" type="button" @change="onPriorityChange">
             <a-radio value="low">低</a-radio>
@@ -205,6 +222,9 @@ function onResetResources() {
             <a-radio value="high">高</a-radio>
           </a-radio-group>
         </a-space>
+        <template #extra>
+          <HintText>影响转码进程在系统中的调度优先级</HintText>
+        </template>
       </a-form-item>
     </a-card>
   </a-form>

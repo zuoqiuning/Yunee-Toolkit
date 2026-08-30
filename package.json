@@ -46,6 +46,7 @@
       "output": "release",
       "buildResources": "build"
     },
+    "electronDist": "node_modules/electron/dist",
     "win": {
       "target": "nsis",
       "icon": "resources/icon.ico",
@@ -60,6 +61,7 @@
       "dist/**/*",
       "dist-electron/**/*",
       "bin/**/*",
+      "licenses/**/*",
       "resources/**/*",
       "package.json"
     ],

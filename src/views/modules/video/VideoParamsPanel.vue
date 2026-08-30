@@ -8,6 +8,7 @@
 import { computed } from 'vue'
 import { useHardwareStore } from '@/stores/hardware'
 import { fitNumberInputWidth } from '@/utils/numberWidth'
+import HintText from '@/components/common/HintText.vue'
 import type { VideoParams } from './types'
 
 /** 参数对象（由父级持有，直接改写属性即可双向同步） */
@@ -81,16 +82,19 @@ const hwExtra = computed(() => {
     <template #title>转换参数</template>
     <a-form class="panel__form" layout="horizontal" :model="params">
       <!-- 输出格式 -->
-      <a-form-item label="输出格式" extra="目标封装格式，决定输出文件的扩展名">
+      <a-form-item label="输出格式">
         <a-select v-model="params.format" style="width: 240px">
           <a-option v-for="o in FORMAT_OPTIONS" :key="o.value" :value="o.value">
             {{ o.label }}
           </a-option>
         </a-select>
+        <template #extra>
+          <HintText>目标封装格式，决定输出文件的扩展名</HintText>
+        </template>
       </a-form-item>
 
       <!-- 视频编码 -->
-      <a-form-item label="视频编码" extra="流复制不重新编码（速度最快）；其余为重新编码">
+      <a-form-item label="视频编码">
         <a-radio-group v-model="params.videoCodec" type="button">
           <a-radio value="copy">流复制</a-radio>
           <a-radio value="h264">H.264</a-radio>
@@ -98,19 +102,25 @@ const hwExtra = computed(() => {
           <a-radio value="vp9">VP9</a-radio>
           <a-radio value="av1">AV1</a-radio>
         </a-radio-group>
+        <template #extra>
+          <HintText>流复制不重新编码（速度最快）；其余为重新编码</HintText>
+        </template>
       </a-form-item>
 
       <!-- 画质 -->
-      <a-form-item label="画质" extra="CRF 恒定质量：高画质体积大，高压缩更省空间">
+      <a-form-item label="画质">
         <a-radio-group v-model="params.quality" type="button">
           <a-radio value="high" :disabled="isCopy">高画质</a-radio>
           <a-radio value="medium" :disabled="isCopy">平衡</a-radio>
           <a-radio value="low" :disabled="isCopy">高压缩</a-radio>
         </a-radio-group>
+        <template #extra>
+          <HintText>CRF 恒定质量：高画质体积大，高压缩更省空间</HintText>
+        </template>
       </a-form-item>
 
       <!-- 分辨率 -->
-      <a-form-item label="分辨率" extra="按原始宽高比等比缩放；流复制时不可用">
+      <a-form-item label="分辨率">
         <a-space wrap>
           <a-radio-group v-model="params.resolution" type="button">
             <a-radio value="origin" :disabled="isCopy">原始</a-radio>
@@ -139,10 +149,13 @@ const hwExtra = computed(() => {
             />
           </template>
         </a-space>
+        <template #extra>
+          <HintText>按原始宽高比等比缩放；流复制时不可用</HintText>
+        </template>
       </a-form-item>
 
       <!-- 帧率 -->
-      <a-form-item label="帧率" extra="输出视频的帧率；流复制时不可用">
+      <a-form-item label="帧率">
         <a-space wrap>
           <a-select v-model="params.fps" style="width: 180px" :disabled="isCopy">
             <a-option v-for="o in FPS_OPTIONS" :key="o.value" :value="o.value">
@@ -159,10 +172,13 @@ const hwExtra = computed(() => {
             :style="{ width: fitNumberInputWidth(params.customFps) }"
           />
         </a-space>
+        <template #extra>
+          <HintText>输出视频的帧率；流复制时不可用</HintText>
+        </template>
       </a-form-item>
 
       <!-- 音频编码 -->
-      <a-form-item label="音频编码" extra="保持音频编码不转码，速度更快">
+      <a-form-item label="音频编码">
         <a-select v-model="params.audioCodec" style="width: 200px">
           <a-option value="copy">保持音频编码</a-option>
           <a-option value="aac">AAC</a-option>
@@ -170,10 +186,13 @@ const hwExtra = computed(() => {
           <a-option value="opus">Opus</a-option>
           <a-option value="vorbis">Vorbis</a-option>
         </a-select>
+        <template #extra>
+          <HintText>保持音频编码不转码，速度更快</HintText>
+        </template>
       </a-form-item>
 
       <!-- 音频码率 -->
-      <a-form-item label="音频码率" extra="重新编码音频时生效">
+      <a-form-item label="音频码率">
         <a-select
           v-model="params.audioBitrate"
           style="width: 200px"
@@ -183,10 +202,13 @@ const hwExtra = computed(() => {
             {{ o.label }}
           </a-option>
         </a-select>
+        <template #extra>
+          <HintText>重新编码音频时生效</HintText>
+        </template>
       </a-form-item>
 
       <!-- 硬件加速 -->
-      <a-form-item label="硬件加速" :extra="hwExtra">
+      <a-form-item label="硬件加速">
         <a-radio-group v-model="params.hwaccel" type="button">
           <a-radio value="auto">自动</a-radio>
           <a-radio value="nvidia" :disabled="gpuDisabled.nvidia">NVIDIA</a-radio>
@@ -194,6 +216,9 @@ const hwExtra = computed(() => {
           <a-radio value="amd" :disabled="gpuDisabled.amd">AMD</a-radio>
           <a-radio value="cpu">CPU</a-radio>
         </a-radio-group>
+        <template #extra>
+          <HintText>{{ hwExtra }}</HintText>
+        </template>
       </a-form-item>
     </a-form>
   </a-card>
@@ -204,5 +229,10 @@ const hwExtra = computed(() => {
 .vparam__x {
   color: var(--color-text-4);
   font-size: 13px;
+}
+
+/* 设置项名称与右侧控件垂直居中，与设置弹窗面板保持一致 */
+.panel__form :deep(.arco-form-item) {
+  align-items: center;
 }
 </style>

@@ -38,6 +38,9 @@ export function initUpdater(winGetter: () => BrowserWindow | null): void {
   autoUpdater.autoDownload = true // 发现新版本后后台自动下载
   autoUpdater.autoInstallOnAppQuit = true // 退出应用时自动完成安装（重启后生效）
 
+  // 初始使用系统代理；若渲染进程配置了更新代理，会在面板挂载/变更时通过 IPC 覆盖
+  applyUpdateProxy(false, '')
+
   autoUpdater.on('checking-for-update', () => {
     logInfo('updater', '正在检查更新…')
     emit('update:checking', { manual: lastManual })
@@ -106,4 +109,38 @@ export function installUpdate(): void {
   if (!app.isPackaged) return
   logInfo('updater', '用户确认重启安装更新')
   autoUpdater.quitAndInstall(false, true)
+}
+
+/**
+ * 校验代理地址是否为合法格式。
+ * 支持 http/https/socks4/socks5 前缀，如 http://127.0.0.1:7890、socks5://127.0.0.1:1080。
+ */
+function isValidProxyUrl(url: string): boolean {
+  return /^(https?|socks4|socks5):\/\/\S+$/i.test(url.trim())
+}
+
+/**
+ * 应用更新代理（由渲染进程「更新设置」同步）。
+ * 原理：electron-updater 的请求走 autoUpdater.netSession（Electron 会话），
+ *       通过 setProxy 把该会话切到固定代理（fixed_servers）或恢复系统代理。
+ * 说明：代理配置持久化在渲染进程设置中，主进程仅保存「本次运行」的状态；
+ *       渲染进程在面板挂载 / 设置变更时都会调用本函数，保证每次检查都使用最新配置。
+ */
+export function applyUpdateProxy(enabled: boolean, url: string): void {
+  const proxyUrl = (url ?? '').trim()
+  try {
+    if (enabled && proxyUrl && isValidProxyUrl(proxyUrl)) {
+      autoUpdater.netSession.setProxy({
+        mode: 'fixed_servers', // 固定代理：所有更新请求走该代理
+        proxyRules: proxyUrl,
+      })
+      logInfo('updater', `更新代理已启用：${proxyUrl}`)
+    } else {
+      // 未启用 / 地址非法：恢复系统代理（Electron 默认），保证正常网络下可用
+      autoUpdater.netSession.setProxy({ mode: 'system' })
+      logInfo('updater', '更新代理未启用，使用系统代理')
+    }
+  } catch (err) {
+    logWarn('updater', `应用更新代理失败：${String(err)}`)
+  }
 }

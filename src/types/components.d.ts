@@ -7,6 +7,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AAlert: typeof import('@arco-design/web-vue')['Alert']
     AAvatar: typeof import('@arco-design/web-vue')['Avatar']
     AboutPanel: typeof import('./../components/settings/panels/AboutPanel.vue')['default']
     AButton: typeof import('@arco-design/web-vue')['Button']
@@ -38,6 +39,7 @@ declare module 'vue' {
     ASelect: typeof import('@arco-design/web-vue')['Select']
     ASkeleton: typeof import('@arco-design/web-vue')['Skeleton']
     ASkeletonLine: typeof import('@arco-design/web-vue')['SkeletonLine']
+    ASlider: typeof import('@arco-design/web-vue')['Slider']
     ASpace: typeof import('@arco-design/web-vue')['Space']
     ASpin: typeof import('@arco-design/web-vue')['Spin']
     ASubMenu: typeof import('@arco-design/web-vue')['SubMenu']
@@ -48,10 +50,10 @@ declare module 'vue' {
     ATag: typeof import('@arco-design/web-vue')['Tag']
     ATooltip: typeof import('@arco-design/web-vue')['Tooltip']
     ATypography: typeof import('@arco-design/web-vue')['Typography']
-    ATypographyText: typeof import('@arco-design/web-vue')['TypographyText']
     CardResetButton: typeof import('./../components/settings/common/CardResetButton.vue')['default']
     GeneralPanel: typeof import('./../components/settings/panels/GeneralPanel.vue')['default']
     GpuDetectCard: typeof import('./../components/settings/panels/performance/GpuDetectCard.vue')['default']
+    HintText: typeof import('./../components/common/HintText.vue')['default']
     LogPanel: typeof import('./../components/settings/panels/LogPanel.vue')['default']
     OutputPanel: typeof import('./../components/settings/panels/OutputPanel.vue')['default']
     PerformancePanel: typeof import('./../components/settings/panels/PerformancePanel.vue')['default']

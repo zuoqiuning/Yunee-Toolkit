@@ -14,6 +14,7 @@ import { registerIpcHandlers } from '../ipc'
 import { getDefaultLogDir } from '../ipc/settings'
 import { initWindowControls } from '../ipc/window'
 import { redirectUserDataInDev } from './dataDir'
+import { readUserTheme } from './userTheme'
 import { createSplashWindow, closeSplashWindow, pushTaskStatus } from './splash'
 import { runStartupTasks } from './startup'
 import { destroyTray, getCloseBehavior, initTray } from './tray'
@@ -56,6 +57,14 @@ if (!gotSingleInstanceLock) {
  * 窗口规范：无边框自定义标题栏；不透明纯直角窗口（roundedCorners: false 禁用系统圆角），阴影由系统绘制。
  */
 function createMainWindow(): void {
+  // 窗口底色跟随“用户设置”的颜色系统（与 Splash 一致）：
+  // 开启「跟随系统」时取系统深浅色，否则取手动主题；无记录（首次启动）回退系统主题。
+  const userTheme = readUserTheme()
+  const isDark = userTheme
+    ? userTheme.themeFollowSystem
+      ? nativeTheme.shouldUseDarkColors
+      : userTheme.theme === 'dark'
+    : nativeTheme.shouldUseDarkColors
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 820,
@@ -66,9 +75,9 @@ function createMainWindow(): void {
     // 不透明窗口：外观由系统绘制，渲染层直接铺满，天然单层无套壳
     // 先隐藏，待页面渲染完成（ready-to-show）再显示，避免白屏闪烁
     show: false,
-    // 窗口底色跟随系统深浅色：页面首帧渲染前即呈现正确底色，
-    // 与渲染层同步设置主题配合，彻底消除深色系统下“先白后黑”的闪烁
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1e1f22' : '#f4f6f9',
+    // 窗口底色跟随用户设置主题：页面首帧渲染前即呈现正确底色，
+    // 与渲染层同步设置主题配合，彻底消除“先系统色后用户色”的闪烁
+    backgroundColor: isDark ? '#1e1f22' : '#f4f6f9',
     // —— 自绘窗口标题栏相关 ——
     frame: false,          // 无边框：由渲染进程 TitleBar 接管标题栏
     roundedCorners: false, // 禁用系统窗口圆角（Electron 支持 Windows）：纯直角外观，风格简洁统一

@@ -14,6 +14,7 @@ import { Notification } from '@arco-design/web-vue'
 import { useSettingsStore } from '@/stores/settings'
 import { highlight } from '@/utils/notify'
 import { fitNumberInputWidth } from '@/utils/numberWidth'
+import HintText from '@/components/common/HintText.vue'
 import CardResetButton from '../common/CardResetButton.vue'
 
 const settings = useSettingsStore()
@@ -169,7 +170,7 @@ function onResetClean() {
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>日志存储</template>
       <template #extra><CardResetButton name="日志存储" @reset="onResetStorage" /></template>
-      <a-form-item label="日志目录" extra="软件运行日志的存放位置；留空使用默认目录">
+      <a-form-item label="日志目录">
         <a-popover
           v-if="settings.logDir"
           position="bottom"
@@ -186,14 +187,20 @@ function onResetClean() {
           <a-button @click="openLogDir">打开</a-button>
           <a-button type="primary" @click="pickLogDir">更改</a-button>
         </a-input-group>
+        <template #extra>
+          <HintText>软件运行日志的存放位置；留空使用默认目录</HintText>
+        </template>
       </a-form-item>
     </a-card>
 
     <!-- 日志输出：固定调试级（全量记录），无档位选择 -->
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>日志输出</template>
-      <a-form-item label="日志级别" extra="固定为调试级别，记录软件运行的全部细节，最便于排查错误与 BUG。">
+      <a-form-item label="日志级别">
         <a-tag color="arcoblue" :bordered="false" size="medium">调试（全量记录）</a-tag>
+        <template #extra>
+          <HintText>固定为调试级别，记录软件运行的全部细节，最便于排查错误与 BUG。</HintText>
+        </template>
       </a-form-item>
     </a-card>
 
@@ -201,7 +208,7 @@ function onResetClean() {
     <a-card class="panel__card" :bordered="true" size="small">
       <template #title>日志清理</template>
       <template #extra><CardResetButton name="日志清理" @reset="onResetClean" /></template>
-      <a-form-item label="保留天数" extra="日志文件超过该天数后自动删除">
+      <a-form-item label="保留天数">
         <a-input-number
           :model-value="settings.logRetainDays"
           :min="1"
@@ -211,8 +218,11 @@ function onResetClean() {
           @change="onRetainChange"
         />
         <span class="log-clean__unit">天</span>
+        <template #extra>
+          <HintText>日志文件超过该天数后自动删除</HintText>
+        </template>
       </a-form-item>
-      <a-form-item label="文件数量上限" extra="日志文件数量超过该值时自动清理最旧的">
+      <a-form-item label="文件数量上限">
         <a-input-number
           :model-value="settings.logMaxFiles"
           :min="10"
@@ -222,12 +232,15 @@ function onResetClean() {
           @change="onMaxFilesChange"
         />
         <span class="log-clean__unit">个</span>
+        <template #extra>
+          <HintText>日志文件数量超过该值时自动清理最旧的</HintText>
+        </template>
       </a-form-item>
       <a-form-item label="操作">
         <a-button :loading="cleaning" @click="onCleanNow">立即清理</a-button>
-        <a-typography-text class="log-clean__hint" type="secondary">
-          应用每次启动及切换日志目录时也会自动清理
-        </a-typography-text>
+        <template #extra>
+          <HintText>应用每次启动及切换日志目录时也会自动清理</HintText>
+        </template>
       </a-form-item>
     </a-card>
   </a-form>
@@ -246,11 +259,5 @@ function onResetClean() {
 .log-clean__unit {
   margin-left: 8px;
   color: var(--color-text-3);
-}
-
-/* 立即清理下方的补充说明 */
-.log-clean__hint {
-  margin-left: 12px;
-  font-size: 12px;
 }
 </style>

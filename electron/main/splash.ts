@@ -11,18 +11,33 @@
 import { BrowserWindow, nativeTheme } from 'electron'
 import path from 'node:path'
 import type { StartupTaskStatus } from './startup'
+import { readUserTheme } from './userTheme'
 import { info as logInfo } from './logger'
 
 /** 当前 Splash 窗口实例（防止被垃圾回收） */
 let splashWindow: BrowserWindow | null = null
 
 /**
+ * 计算 Splash 窗口应使用的深色标记：
+ * 跟随“用户设置”的颜色系统 —— 开启「跟随系统」时取系统深浅色，否则取手动主题；
+ * 无用户主题记录（首次启动）时回退系统主题。
+ */
+function resolveSplashDark(): boolean {
+  const userTheme = readUserTheme()
+  if (!userTheme) return nativeTheme.shouldUseDarkColors
+  return userTheme.themeFollowSystem
+    ? nativeTheme.shouldUseDarkColors
+    : userTheme.theme === 'dark'
+}
+
+/**
  * 创建并显示 Splash 窗口：居中、无边框、不可缩放、不占任务栏、置顶显示进度。
  * loadFile 加载本地静态页；ready-to-show 后再显示，避免白屏闪烁。
  */
 export function createSplashWindow(): BrowserWindow {
-  // 系统是否为深色模式：用于设置加载窗口背景色（避免加载页渲染前闪烁白屏）
-  const isDark = nativeTheme.shouldUseDarkColors
+  // 是否为深色模式：跟随用户设置的颜色系统（非系统主题），用于设置加载窗口背景色，
+  // 避免加载页渲染前闪烁白屏，同时与用户在软件内选择的主题保持一致。
+  const isDark = resolveSplashDark()
   splashWindow = new BrowserWindow({
     width: 440,
     height: 350,
