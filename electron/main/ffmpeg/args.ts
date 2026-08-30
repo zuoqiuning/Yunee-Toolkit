@@ -97,8 +97,9 @@ export function buildFfmpegArgs(
         // VP9 恒定质量需配合 -b:v 0
         args.push('-b:v', '0', '-crf', String(crf))
       } else if (hwEnc) {
-        // 各硬件编码器的恒定质量参数
-        args.push(getHwQualityArg(encoder, crf))
+        // 各硬件编码器的恒定质量参数（数组展开为独立参数：
+        // 若整体 push 会把 ['-cq','23'] 变成单个元素，ffmpeg 将报 Unrecognized option 'cq,23'）
+        args.push(...getHwQualityArg(encoder, crf))
       } else {
         args.push('-crf', String(crf), '-preset', ENCODER_PRESET)
       }
